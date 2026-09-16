@@ -12,6 +12,7 @@ import (
 )
 
 // Workflow executes repository workflows one repository at a time.
+// Within each repository, targets execute their complete workflow one at a time.
 // Promote is organization-wide and therefore runs once with the complete repository set.
 func Workflow(Parms *structures.Parms) {
 	if Parms.Subcommand == "promote" {
@@ -29,18 +30,112 @@ func Workflow(Parms *structures.Parms) {
 	for _, repository := range repositories {
 		Parms.Repos = []string{repository}
 		cli.Header(*Parms, "%s %s", workflowName(Parms.Subcommand), filepath.Base(repository))
+		workflowRepository(repository, Parms, 0)
+	}
+}
 
-		switch Parms.Subcommand {
+// workflowRepository executes the requested workflow target by target.
+//
+// This deliberately restores the original workflow semantics: one project
+// completes its lifecycle before the next project starts. A tolerated failure
+// invalidates the repository for the final commit/push, but does not prevent
+// sibling targets in the same repository from being processed.
+func workflowRepository(repository string, Parms *structures.Parms, depth int) {
+	if isBlackListed(*Parms, repository) {
+		return
+	}
+
+	targets := workflowRepositoryTargets(*Parms, repository)
+	repositoryActive := false
+	repositoryFailed := false
+
+	for _, target := range targets {
+		rcBefore := RC.Value(Parms.RC)
+
+		targetParms := workflowTargetParms(*Parms, repository, target)
+
+		// Once one target has failed, keep processing sibling targets in tolerant
+		// mode but do not create later checkpoints for a repository that is
+		// already known to be invalid.
+		if repositoryFailed {
+			targetParms.Checkpoints = false
+		}
+
+		switch targetParms.Subcommand {
 		case "build":
-			workflowBuild(true, Parms, 0)
+			workflowBuild(false, &targetParms, depth)
 		case "publish":
-			workflowPublish(true, Parms, 0)
+			workflowPublish(false, &targetParms, depth)
 		case "release":
-			workflowRelease(true, Parms, 0)
+			workflowRelease(false, &targetParms, depth)
 		default:
-			cli.Error(RC.Error, *Parms, "Workflow desconocido: %q", Parms.Subcommand)
+			cli.Error(RC.Error, targetParms, "Workflow desconocido: %q", targetParms.Subcommand)
+		}
+
+		// A target for which the workflow does not apply is transparent. In
+		// particular, repository/none targets must not contaminate the global
+		// result merely because their build returns NothingToDo.
+		if RC.Result(targetParms.LastRC) == RC.NothingToDo &&
+			len(targetParms.Repos) == 0 &&
+			!isBlackListed(targetParms, repository) {
+			if Parms.RC != nil {
+				*Parms.RC = rcBefore
+			}
+			continue
+		}
+
+		Parms.LastRC = targetParms.LastRC
+
+		if isBlackListed(targetParms, repository) {
+			repositoryFailed = true
+			continue
+		}
+
+		if len(targetParms.Repos) != 0 {
+			repositoryActive = true
 		}
 	}
+
+	Parms.Repos = []string{repository}
+
+	if repositoryFailed {
+		addToBlackList(Parms, repository)
+	}
+
+	// Without checkpoints, commit/push once after every valid target in the
+	// repository has completed. With checkpoints, the stage workflows already
+	// performed the requested commits.
+	if repositoryActive && !Parms.Checkpoints {
+		Parms.Repos = Commit(Parms, depth+1)
+	}
+}
+
+// workflowRepositoryTargets returns the discovered targets that belong to one
+// repository, preserving discovery order.
+func workflowRepositoryTargets(Parms structures.Parms, repository string) []structures.Target {
+	targets := []structures.Target{}
+
+	for _, target := range Parms.TargetDetails {
+		if target.Repository != "" &&
+			filepath.Clean(target.Repository) == filepath.Clean(repository) {
+			targets = append(targets, target)
+		}
+	}
+
+	return targets
+}
+
+// workflowTargetParms creates the single-target view used by workflows.
+// The cumulative RC and log handle remain shared; selection and blacklist are
+// isolated so one tolerated target failure cannot hide its sibling targets.
+func workflowTargetParms(Parms structures.Parms, repository string, target structures.Target) structures.Parms {
+	targetParms := Parms
+	targetParms.Repos = []string{repository}
+	targetParms.Targets = []string{target.Path}
+	targetParms.TargetDetails = []structures.Target{target}
+	targetParms.BlackList = nil
+	targetParms.LastRC = RC.OK
+	return targetParms
 }
 
 // workflowBuild builds and commits when standalone or used as a checkpoint.

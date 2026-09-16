@@ -80,6 +80,83 @@ func TestWorkflowRunStageKeepsNothingToDoWhenStageIsRequired(t *testing.T) {
 	}
 }
 
+func TestWorkflowRepositoryTargetsPreserveProjectOrder(t *testing.T) {
+	repoA := filepath.Join("C:", "iasi-org-dev", "repo-a")
+	repoB := filepath.Join("C:", "iasi-org-dev", "repo-b")
+
+	parms := structures.Parms{
+		TargetDetails: []structures.Target{
+			{Path: filepath.Join(repoA, "project-1"), Repository: repoA},
+			{Path: filepath.Join(repoB, "project-x"), Repository: repoB},
+			{Path: filepath.Join(repoA, "project-2"), Repository: repoA},
+		},
+	}
+
+	targets := workflowRepositoryTargets(parms, repoA)
+
+	if len(targets) != 2 {
+		t.Fatalf("len(targets) = %d, want 2", len(targets))
+	}
+	if filepath.Base(targets[0].Path) != "project-1" ||
+		filepath.Base(targets[1].Path) != "project-2" {
+		t.Fatalf("target order = [%s, %s], want [project-1, project-2]",
+			filepath.Base(targets[0].Path),
+			filepath.Base(targets[1].Path),
+		)
+	}
+}
+
+func TestWorkflowTargetParmsExposeExactlyOneProject(t *testing.T) {
+	repository := filepath.Join("C:", "iasi-org-dev", "repo-a")
+	first := structures.Target{
+		Path:       filepath.Join(repository, "project-1"),
+		Type:       "quarto",
+		Repository: repository,
+	}
+	second := structures.Target{
+		Path:       filepath.Join(repository, "project-2"),
+		Type:       "quarto",
+		Repository: repository,
+	}
+
+	parms := structures.Parms{
+		Repos:         []string{repository},
+		Targets:       []string{first.Path, second.Path},
+		TargetDetails: []structures.Target{first, second},
+		BlackList:     []string{"some-other-repository"},
+		LastRC:        RC.Warning,
+	}
+
+	targetParms := workflowTargetParms(parms, repository, second)
+	selected := selectedTargets(targetParms)
+
+	if len(selected) != 1 {
+		t.Fatalf("selected targets = %d, want 1", len(selected))
+	}
+	if filepath.Clean(selected[0].Path) != filepath.Clean(second.Path) {
+		t.Fatalf("selected target = %q, want %q", selected[0].Path, second.Path)
+	}
+	if len(targetParms.Targets) != 1 ||
+		filepath.Clean(targetParms.Targets[0]) != filepath.Clean(second.Path) {
+		t.Fatalf("Targets = %v, want [%s]", targetParms.Targets, second.Path)
+	}
+	if len(targetParms.Repos) != 1 ||
+		filepath.Clean(targetParms.Repos[0]) != filepath.Clean(repository) {
+		t.Fatalf("Repos = %v, want [%s]", targetParms.Repos, repository)
+	}
+	if len(targetParms.BlackList) != 0 {
+		t.Fatalf("target blacklist = %v, want empty isolated blacklist", targetParms.BlackList)
+	}
+	if targetParms.LastRC != RC.OK {
+		t.Fatalf("LastRC = 0x%X, want 0x%X", targetParms.LastRC, RC.OK)
+	}
+
+	// The source parameter set must remain untouched.
+	if len(parms.TargetDetails) != 2 || len(parms.Targets) != 2 || len(parms.BlackList) != 1 {
+		t.Fatalf("source parameters were modified: %+v", parms)
+	}
+}
+
 func TestWorkflowOrganizationRoot(t *testing.T) {
 	repositories := []string{
 		filepath.Join("C:", "iasi-org-dev", "repo-a"),
