@@ -88,7 +88,12 @@ func targetIndent(target structures.Target) string {
 }
 
 func targetUsesR(target structures.Target) bool {
-	return strings.EqualFold(strings.TrimSpace(target.Type), "r")
+	switch strings.ToLower(strings.TrimSpace(target.Type)) {
+	case "r", "quarto", "book", "guide":
+		return true
+	default:
+		return false
+	}
 }
 
 func appendRepository(repositories []string, repository string) []string {

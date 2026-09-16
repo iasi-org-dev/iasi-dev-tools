@@ -62,3 +62,17 @@ func TestHandleRCNonTolerantAbortsOnErroneousResult(t *testing.T) {
 
 	handleRC(&parms, RC.Error)
 }
+
+func TestTargetUsesRRecognizesRBackedTypes(t *testing.T) {
+	for _, targetType := range []string{"r", "quarto", "book", "guide"} {
+		if !targetUsesR(structures.Target{Type: targetType}) {
+			t.Fatalf("targetUsesR(%q) = false, want true", targetType)
+		}
+	}
+
+	for _, targetType := range []string{"repository", "software", "website", "none"} {
+		if targetUsesR(structures.Target{Type: targetType}) {
+			t.Fatalf("targetUsesR(%q) = true, want false", targetType)
+		}
+	}
+}

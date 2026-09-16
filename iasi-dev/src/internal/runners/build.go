@@ -58,8 +58,10 @@ func dispatchBuild(target structures.Target, Parms structures.Parms) int {
 	case "repository":
 		return RC.NothingToDo
 	case "software":
+		cli.Step(Parms, "%sBuilding", targetIndent(target))
 		return buildSoftware(target, Parms)
 	case "r", "quarto", "book", "guide":
+		cli.Step(Parms, "%sBuilding", targetIndent(target))
 		return buildR(target.Path, Parms)
 	default:
 		cli.Warning(Parms, "Build no soportado para %s: type=%s", filepath.Base(target.Path), targetType)

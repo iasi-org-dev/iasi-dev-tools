@@ -25,6 +25,61 @@ func TestWorkflowContinuesAfterOtherBuildResults(t *testing.T) {
 	}
 }
 
+func TestWorkflowRunStagePreservesPreviousStateWhenOptionalStageDoesNotApply(t *testing.T) {
+	rc := RC.Warning
+	parms := structures.Parms{
+		All:    true,
+		Repos:  []string{"repo-a"},
+		LastRC: RC.OK,
+		RC:     &rc,
+	}
+
+	runner := func(parms *structures.Parms) []string {
+		RC.Add(parms.RC, RC.NothingToDo)
+		parms.LastRC = RC.NothingToDo
+		return nil
+	}
+
+	workflowRunStage(&parms, runner, true)
+
+	if len(parms.Repos) != 1 || parms.Repos[0] != "repo-a" {
+		t.Fatalf("Repos = %v, want [repo-a]", parms.Repos)
+	}
+	if rc != RC.Warning {
+		t.Fatalf("RC = 0x%X, want 0x%X", rc, RC.Warning)
+	}
+	if parms.LastRC != RC.OK {
+		t.Fatalf("LastRC = 0x%X, want 0x%X", parms.LastRC, RC.OK)
+	}
+}
+
+func TestWorkflowRunStageKeepsNothingToDoWhenStageIsRequired(t *testing.T) {
+	rc := RC.OK
+	parms := structures.Parms{
+		Repos:  []string{"repo-a"},
+		LastRC: RC.OK,
+		RC:     &rc,
+	}
+
+	runner := func(parms *structures.Parms) []string {
+		RC.Add(parms.RC, RC.NothingToDo)
+		parms.LastRC = RC.NothingToDo
+		return nil
+	}
+
+	workflowRunStage(&parms, runner, false)
+
+	if len(parms.Repos) != 0 {
+		t.Fatalf("Repos = %v, want empty", parms.Repos)
+	}
+	if rc != RC.NothingToDo {
+		t.Fatalf("RC = 0x%X, want 0x%X", rc, RC.NothingToDo)
+	}
+	if parms.LastRC != RC.NothingToDo {
+		t.Fatalf("LastRC = 0x%X, want 0x%X", parms.LastRC, RC.NothingToDo)
+	}
+}
+
 func TestWorkflowOrganizationRoot(t *testing.T) {
 	repositories := []string{
 		filepath.Join("C:", "iasi-org-dev", "repo-a"),

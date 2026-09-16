@@ -1,0 +1,13 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "IASI Dev",
+    "section": "",
+    "text": "1 Introducción\niasi-dev es la herramienta de línea de comandos utilizada para realizar las operaciones habituales de desarrollo del proyecto IASI.\nExiste por y para IASI. Conoce sus proyectos, sus artefactos, sus convenciones y la forma en que se realizan operaciones como construcción, publicación, commit, release, sincronización y procesamiento de múltiples targets.\nA medida que IASI crece, también crece el número de tareas que deben ejecutarse de forma sistemática sobre sus distintos componentes. iasi-dev proporciona una interfaz común para realizar ese trabajo.\niasi-dev command [flags] [parameters] [targets...]\n\n\n\n\nTabla 1.1: Elementos de una llamada a iasi-dev\n\n\n\n\n\n\n\n\n\n\nElemento\nSignificado\n\n\n\n\ncommand\nOperación que se desea realizar.\n\n\nflags\nModificadores del comportamiento de la ejecución.\n\n\nparameters\nValores asociados a opciones o necesidades concretas del comando.\n\n\ntargets\nElementos de IASI sobre los que se aplica la operación.\n\n\n\n\n\n\n\n\nUna misma operación puede aplicarse a un único target, a varios targets seleccionados o a un conjunto resuelto a partir del contexto actual.\nEsta guía explica cómo utilizar iasi-dev: su modelo de comandos y targets, las operaciones disponibles, sus opciones, el procesamiento de múltiples proyectos, los resultados de ejecución, los logs y las herramientas de diagnóstico.",
+    "crumbs": [
+      "Inicio",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>IASI Dev</span>"
+    ]
+  }
+]

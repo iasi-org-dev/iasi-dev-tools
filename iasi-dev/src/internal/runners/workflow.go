@@ -65,7 +65,11 @@ func workflowPublish(standalone bool, Parms *structures.Parms) {
 		return
 	}
 
-	Parms.Repos = Publish(Parms)
+	workflowRunStage(Parms, Publish, Parms.All)
+	if len(Parms.Repos) == 0 {
+		return
+	}
+
 	if standalone || Parms.Checkpoints {
 		Parms.Repos = Commit(Parms)
 	}
@@ -80,9 +84,32 @@ func workflowRelease(standalone bool, Parms *structures.Parms) {
 		return
 	}
 
-	Parms.Repos = Release(Parms)
+	workflowRunStage(Parms, Release, Parms.All)
+	if len(Parms.Repos) == 0 {
+		return
+	}
+
 	if standalone || Parms.Checkpoints {
 		Parms.Repos = Commit(Parms)
+	}
+}
+
+// workflowRunStage executes one workflow stage. When -a is active, a stage that
+// does not apply to the current repository is transparent: the repository and
+// accumulated result from the preceding stage are preserved.
+func workflowRunStage(Parms *structures.Parms, runner func(*structures.Parms) []string, optional bool) {
+	repositories := append([]string{}, Parms.Repos...)
+	rc := RC.Value(Parms.RC)
+	lastRC := Parms.LastRC
+
+	Parms.Repos = runner(Parms)
+
+	if optional && RC.Result(Parms.LastRC) == RC.NothingToDo {
+		Parms.Repos = repositories
+		if Parms.RC != nil {
+			*Parms.RC = rc
+		}
+		Parms.LastRC = lastRC
 	}
 }
 
