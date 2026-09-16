@@ -1,0 +1,37 @@
+[1m[38;2;0;0;255m--- PARMS ------------------------------------------------
+Verbose: 1
+All: true
+Checkpoints: false
+Debug: false
+PrepareOnly: false
+DryRun: true
+Force: false
+Help: false
+Install: false
+Local: false
+Push: false
+Tolerant: false
+Message: "build"
+Format: ""
+Path: ""
+LogDir: ""
+Organization: "iasi-org-dev"
+Version: "v0.5.0"
+TargetVersion: ""
+MaterializeDestination: ""
+Subcommand: ""
+RequestedTargets:
+Targets:
+  - C:\iasi-org-dev\iasi-dev-tools
+  - C:\iasi-org-dev\iasi-dev-tools\iasi-dev
+  - C:\iasi-org-dev\iasi-dev-tools\iasi-dev\docs\01-user-guide
+Exclusions:
+  - .git
+  - .github
+  - tests
+Repos:
+  - C:\iasi-org-dev\iasi-dev-tools
+BlackList:
+----------------------------------------------------------[0m
+16:05:19 - [1m[36mBuild iasi-dev-tools[0m
+[1m[38;2;0;0;255mCommand [C:\iasi-org-dev\iasi-dev-tools]: Rscript -e "options(warn = 1); rc = iasi::build(); quit(status = as.integer(rc), save = \"no\")"[0m

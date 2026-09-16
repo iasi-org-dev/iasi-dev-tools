@@ -1,0 +1,35 @@
+15:52:25 - Command [C:\iasi-org-dev\iasi-dev-tools]: git remote get-url origin
+15:52:25 - Command [.]: gh variable get VERSION --org iasi-org-dev
+--- PARMS ------------------------------------------------
+Verbose: 1
+All: true
+Checkpoints: false
+Debug: false
+PrepareOnly: true
+DryRun: false
+Force: false
+Help: false
+Install: false
+Local: false
+Push: false
+Tolerant: false
+Message: "build"
+Format: ""
+Path: ""
+LogDir: ""
+Organization: "iasi-org-dev"
+Version: "v0.5.0"
+TargetVersion: ""
+MaterializeDestination: ""
+Subcommand: ""
+RequestedTargets:
+Targets:
+  - C:\iasi-org-dev\iasi-dev-tools
+Exclusions:
+  - .git
+  - .github
+  - tests
+Repos:
+  - C:\iasi-org-dev\iasi-dev-tools
+BlackList:
+----------------------------------------------------------
