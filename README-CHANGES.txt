@@ -8,3 +8,11 @@ IASI Dev depth/output refactor
 - website routed through the R-backed lifecycle
 - operation messages include target name and type
 - commit message is emitted only when there are actual changes
+
+V2 commit/push fix
+------------------
+- RC.NothingToDo from git status no longer aborts commitRepository
+- old early return is retained as a comment
+- add/commit run only when the working tree has changes
+- push runs independently afterwards when not local
+- explicit Pushing <repository> message added

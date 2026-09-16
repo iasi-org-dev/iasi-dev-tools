@@ -42,29 +42,38 @@ func commitRepository(repository string, Parms *structures.Parms, depth int) int
 
 	rc := changesPending(repository, *Parms)
 	if rc == RC.NothingToDo {
-		return rc
-	}
-	if handleRC(Parms, rc) == RC.Skip {
-		return RC.Skip
-	}
-
-	if Parms.Subcommand == "" {
-		cli.Header(*Parms, "Commit %s", filepath.Base(repository))
+		// Do not return here. A clean working tree does not mean there is
+		// nothing to push: local commits may still be ahead of the remote.
+		// return rc
 	} else {
-		cli.StepAt(*Parms, depth, "Committing %s", filepath.Base(repository))
-	}
+		if handleRC(Parms, rc) == RC.Skip {
+			return RC.Skip
+		}
 
-	rc = addChanges(repository, *Parms)
-	if handleRC(Parms, rc) == RC.Skip {
-		return RC.Skip
-	}
+		if Parms.Subcommand == "" {
+			cli.Header(*Parms, "Commit %s", filepath.Base(repository))
+		} else {
+			cli.StepAt(*Parms, depth, "Committing %s", filepath.Base(repository))
+		}
 
-	rc = commitChanges(repository, *Parms)
-	if handleRC(Parms, rc) == RC.Skip {
-		return RC.Skip
+		rc = addChanges(repository, *Parms)
+		if handleRC(Parms, rc) == RC.Skip {
+			return RC.Skip
+		}
+
+		rc = commitChanges(repository, *Parms)
+		if handleRC(Parms, rc) == RC.Skip {
+			return RC.Skip
+		}
 	}
 
 	if !Parms.Local {
+		if Parms.Subcommand == "" {
+			cli.Header(*Parms, "Push %s", filepath.Base(repository))
+		} else {
+			cli.StepAt(*Parms, depth, "Pushing %s", filepath.Base(repository))
+		}
+
 		rc = pushChanges(repository, *Parms)
 		if handleRC(Parms, rc) == RC.Skip {
 			return RC.Skip
