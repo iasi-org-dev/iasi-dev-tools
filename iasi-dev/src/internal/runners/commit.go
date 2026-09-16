@@ -11,7 +11,7 @@ import (
 )
 
 // Commit commits the selected repositories and returns the targets that remain active.
-func Commit(Parms *structures.Parms) []string {
+func Commit(Parms *structures.Parms, depth int) []string {
 	if Parms.Debug {
 		fmt.Printf("Commit: repos=%v blackList=%v\n", Parms.Repos, Parms.BlackList)
 	}
@@ -22,12 +22,7 @@ func Commit(Parms *structures.Parms) []string {
 			continue
 		}
 
-		if Parms.Subcommand == "" {
-			cli.Header(*Parms, "Commit %s", filepath.Base(repository))
-		}
-		cli.Step(*Parms, "Committing")
-
-		rc := commitRepository(repository, Parms)
+		rc := commitRepository(repository, Parms, depth)
 		switch rc {
 		case RC.OK, RC.NothingToDo:
 			targets = append(targets, repository)
@@ -40,7 +35,7 @@ func Commit(Parms *structures.Parms) []string {
 	return targets
 }
 
-func commitRepository(repository string, Parms *structures.Parms) int {
+func commitRepository(repository string, Parms *structures.Parms, depth int) int {
 	if Parms.Debug {
 		fmt.Printf("commitRepository: repository=%s tolerant=%t local=%t\n", repository, Parms.Tolerant, Parms.Local)
 	}
@@ -51,6 +46,12 @@ func commitRepository(repository string, Parms *structures.Parms) int {
 	}
 	if handleRC(Parms, rc) == RC.Skip {
 		return RC.Skip
+	}
+
+	if Parms.Subcommand == "" {
+		cli.Header(*Parms, "Commit %s", filepath.Base(repository))
+	} else {
+		cli.StepAt(*Parms, depth, "Committing %s", filepath.Base(repository))
 	}
 
 	rc = addChanges(repository, *Parms)

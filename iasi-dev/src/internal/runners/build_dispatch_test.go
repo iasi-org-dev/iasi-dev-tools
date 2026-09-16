@@ -15,7 +15,7 @@ func TestDispatchBuildRoutesDocumentTypesToSameRBuilder(t *testing.T) {
 	commands.SetDryRun(true)
 	defer commands.SetDryRun(false)
 
-	for _, targetType := range []string{"quarto", "book", "guide"} {
+	for _, targetType := range []string{"quarto", "book", "guide", "website"} {
 		t.Run(targetType, func(t *testing.T) {
 			root := t.TempDir()
 			logPath := filepath.Join(root, "build.log")
@@ -27,7 +27,7 @@ func TestDispatchBuildRoutesDocumentTypesToSameRBuilder(t *testing.T) {
 			target := structures.Target{Path: root, Type: targetType}
 			parms := structures.Parms{DryRun: true, LogFile: logFile}
 
-			if rc := dispatchBuild(target, parms); rc != RC.OK {
+			if rc := dispatchBuild(target, parms, 0); rc != RC.OK {
 				_ = logFile.Close()
 				t.Fatalf("dispatchBuild(%s) RC = %d, want %d", targetType, rc, RC.OK)
 			}
@@ -61,7 +61,7 @@ func TestDispatchBuildRoutesSoftwareToIASIScript(t *testing.T) {
 	target := structures.Target{Path: root, Type: "software", Builder: "iasi-script"}
 	parms := structures.Parms{DryRun: true, LogFile: logFile}
 
-	if rc := dispatchBuild(target, parms); rc != RC.OK {
+	if rc := dispatchBuild(target, parms, 0); rc != RC.OK {
 		_ = logFile.Close()
 		t.Fatalf("dispatchBuild(software:iasi-script) RC = %d, want %d", rc, RC.OK)
 	}
@@ -78,7 +78,7 @@ func TestDispatchBuildRoutesSoftwareToIASIScript(t *testing.T) {
 	}
 }
 
-func TestDispatchBuildWarnsForUnsupportedTypeBuilder(t *testing.T) {
+func TestDispatchBuildNothingToDoIsSilent(t *testing.T) {
 	root := t.TempDir()
 	logPath := filepath.Join(root, "build.log")
 	logFile, err := os.Create(logPath)
@@ -89,7 +89,7 @@ func TestDispatchBuildWarnsForUnsupportedTypeBuilder(t *testing.T) {
 	target := structures.Target{Path: filepath.Join(root, "mystery"), Type: "software", Builder: "unknown"}
 	parms := structures.Parms{LogFile: logFile}
 
-	if rc := dispatchBuild(target, parms); rc != RC.NothingToDo {
+	if rc := dispatchBuild(target, parms, 0); rc != RC.NothingToDo {
 		_ = logFile.Close()
 		t.Fatalf("dispatchBuild unsupported RC = %d, want %d", rc, RC.NothingToDo)
 	}
@@ -101,8 +101,7 @@ func TestDispatchBuildWarnsForUnsupportedTypeBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := string(data)
-	if !strings.Contains(text, "Builder de software no soportado para mystery: unknown") {
-		t.Fatalf("unsupported build warning missing: %q", text)
+	if strings.TrimSpace(string(data)) != "" {
+		t.Fatalf("NothingToDo wrote to the log: %q", string(data))
 	}
 }

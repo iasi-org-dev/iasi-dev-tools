@@ -29,6 +29,8 @@ const (
 	visibilityVeryVerbose
 )
 
+const IndentSize = 4
+
 const (
 	logBanner   = "============================================================"
 	colorReset  = "\033[0m"
@@ -84,9 +86,18 @@ func Header(Parms structures.Parms, format string, args ...any) {
 	writeConsoleMessage(os.Stdout, levelHeader, true, message)
 }
 
-// Step writes an indented Info message only in very verbose mode.
+// Step writes a one-level indented Info message only in very verbose mode.
 func Step(Parms structures.Parms, format string, args ...any) {
-	message := "\t" + fmt.Sprintf(format, args...)
+	StepAt(Parms, 1, format, args...)
+}
+
+// StepAt writes an Info message at the requested indentation depth.
+// Each level is exactly IndentSize spaces.
+func StepAt(Parms structures.Parms, depth int, format string, args ...any) {
+	if depth < 0 {
+		depth = 0
+	}
+	message := strings.Repeat(" ", depth*IndentSize) + fmt.Sprintf(format, args...)
 	info(Parms, visibilityVeryVerbose, message)
 }
 

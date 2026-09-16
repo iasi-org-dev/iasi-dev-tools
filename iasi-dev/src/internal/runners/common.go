@@ -3,7 +3,6 @@ package runners
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"iasi-dev/internal/cli"
 	"iasi-dev/internal/consts/RC"
@@ -83,17 +82,30 @@ func repositorySelected(repositories []string, repository string) bool {
 	return false
 }
 
-func targetIndent(target structures.Target) string {
-	return strings.Repeat("  ", target.Depth)
+// targetMessageDepth preserves discovered hierarchy while ensuring that a
+// top-level buildable target is shown one level below its enclosing operation.
+func targetMessageDepth(base int, target structures.Target) int {
+	if base < 0 {
+		base = 0
+	}
+	depth := target.Depth
+	if depth < 1 {
+		depth = 1
+	}
+	return base + depth
 }
 
-func targetUsesR(target structures.Target) bool {
-	switch strings.ToLower(strings.TrimSpace(target.Type)) {
-	case "r", "quarto", "book", "guide":
-		return true
-	default:
-		return false
+func targetLabel(target structures.Target) string {
+	return fmt.Sprintf("%s [%s]", filepath.Base(target.Path), target.Type)
+}
+
+func targetMessage(Parms structures.Parms, target structures.Target, depth int, headerVerb string, stepVerb string) {
+	label := targetLabel(target)
+	if Parms.Subcommand == "" {
+		cli.Header(Parms, "%s %s", headerVerb, label)
+		return
 	}
+	cli.StepAt(Parms, targetMessageDepth(depth, target), "%s %s", stepVerb, label)
 }
 
 func appendRepository(repositories []string, repository string) []string {

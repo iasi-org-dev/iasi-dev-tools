@@ -73,13 +73,13 @@ func run() (exitCode int) {
 
 	switch command {
 	case "build":
-		runners.Build(&Parms)
+		runners.Build(&Parms, 0)
 	case "publish":
-		runners.Publish(&Parms)
+		runners.Publish(&Parms, 0)
 	case "commit":
-		runners.Commit(&Parms)
+		runners.Commit(&Parms, 0)
 	case "release":
-		runners.Release(&Parms)
+		runners.Release(&Parms, 0)
 	case "workflow":
 		runners.Workflow(&Parms)
 	case "sync":

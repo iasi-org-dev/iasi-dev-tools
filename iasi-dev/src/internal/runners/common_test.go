@@ -63,16 +63,23 @@ func TestHandleRCNonTolerantAbortsOnErroneousResult(t *testing.T) {
 	handleRC(&parms, RC.Error)
 }
 
-func TestTargetUsesRRecognizesRBackedTypes(t *testing.T) {
-	for _, targetType := range []string{"r", "quarto", "book", "guide"} {
-		if !targetUsesR(structures.Target{Type: targetType}) {
-			t.Fatalf("targetUsesR(%q) = false, want true", targetType)
-		}
+func TestTargetMessageDepth(t *testing.T) {
+	tests := []struct {
+		base  int
+		depth int
+		want  int
+	}{
+		{0, 0, 1},
+		{0, 1, 1},
+		{0, 2, 2},
+		{1, 0, 2},
+		{1, 2, 3},
 	}
 
-	for _, targetType := range []string{"repository", "software", "website", "none"} {
-		if targetUsesR(structures.Target{Type: targetType}) {
-			t.Fatalf("targetUsesR(%q) = true, want false", targetType)
+	for _, test := range tests {
+		target := structures.Target{Depth: test.depth}
+		if got := targetMessageDepth(test.base, target); got != test.want {
+			t.Fatalf("targetMessageDepth(%d, depth=%d) = %d, want %d", test.base, test.depth, got, test.want)
 		}
 	}
 }

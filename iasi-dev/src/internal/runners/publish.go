@@ -6,15 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"iasi-dev/internal/cli"
 	"iasi-dev/internal/commands"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
 )
 
-// Publish processes discovered IASI targets in iasi-dev. For now only targets
-// declaring type: r are delegated to the existing R implementation.
-func Publish(Parms *structures.Parms) []string {
+// Publish processes discovered IASI targets through the publish dispatcher.
+func Publish(Parms *structures.Parms, depth int) []string {
 	if Parms.Debug {
 		fmt.Printf("Publish: targets=%v\n", Parms.TargetDetails)
 	}
@@ -25,17 +23,13 @@ func Publish(Parms *structures.Parms) []string {
 		if target.Repository != "" && isBlackListed(*Parms, target.Repository) {
 			continue
 		}
-		if Parms.Subcommand == "" {
-			cli.Header(*Parms, "%sPublish %s [%s]", targetIndent(target), filepath.Base(target.Path), target.Type)
-		}
 
-		if !targetUsesR(target) {
+		rc := dispatchPublish(target, *Parms, depth)
+		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
-		processed = true
-		cli.Step(*Parms, "%sPublishing", targetIndent(target))
 
-		rc := publishTarget(target.Path, *Parms)
+		processed = true
 		Parms.LastRC = rc
 		if RC.Has(handleRC(Parms, rc), RC.Skip) {
 			if target.Repository != "" {
@@ -51,6 +45,16 @@ func Publish(Parms *structures.Parms) []string {
 		RC.Add(Parms.RC, RC.NothingToDo)
 	}
 	return repositories
+}
+
+func dispatchPublish(target structures.Target, Parms structures.Parms, depth int) int {
+	switch strings.ToLower(strings.TrimSpace(target.Type)) {
+	case "r", "quarto", "book", "guide", "website":
+		targetMessage(Parms, target, depth, "Publish", "Publishing")
+		return publishTarget(target.Path, Parms)
+	default:
+		return RC.NothingToDo
+	}
 }
 
 func publishTarget(target string, Parms structures.Parms) int {

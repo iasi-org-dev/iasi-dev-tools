@@ -2,17 +2,15 @@ package runners
 
 import (
 	"fmt"
-	"path/filepath"
+	"strings"
 
-	"iasi-dev/internal/cli"
 	"iasi-dev/internal/commands"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
 )
 
-// Release processes discovered IASI targets in iasi-dev. For now only targets
-// declaring type: r are delegated to the existing R implementation.
-func Release(Parms *structures.Parms) []string {
+// Release processes discovered IASI targets through the release dispatcher.
+func Release(Parms *structures.Parms, depth int) []string {
 	if Parms.Debug {
 		fmt.Printf("Release: targets=%v\n", Parms.TargetDetails)
 	}
@@ -23,17 +21,13 @@ func Release(Parms *structures.Parms) []string {
 		if target.Repository != "" && isBlackListed(*Parms, target.Repository) {
 			continue
 		}
-		if Parms.Subcommand == "" {
-			cli.Header(*Parms, "%sRelease %s [%s]", targetIndent(target), filepath.Base(target.Path), target.Type)
-		}
 
-		if !targetUsesR(target) {
+		rc := dispatchRelease(target, *Parms, depth)
+		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
-		processed = true
-		cli.Step(*Parms, "%sReleasing", targetIndent(target))
 
-		rc := releaseTarget(target.Path, *Parms)
+		processed = true
 		Parms.LastRC = rc
 		if RC.Has(handleRC(Parms, rc), RC.Skip) {
 			if target.Repository != "" {
@@ -49,6 +43,16 @@ func Release(Parms *structures.Parms) []string {
 		RC.Add(Parms.RC, RC.NothingToDo)
 	}
 	return repositories
+}
+
+func dispatchRelease(target structures.Target, Parms structures.Parms, depth int) int {
+	switch strings.ToLower(strings.TrimSpace(target.Type)) {
+	case "r", "quarto", "book", "guide", "website":
+		targetMessage(Parms, target, depth, "Release", "Releasing")
+		return releaseTarget(target.Path, Parms)
+	default:
+		return RC.NothingToDo
+	}
 }
 
 func releaseTarget(target string, Parms structures.Parms) int {

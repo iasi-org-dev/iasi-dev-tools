@@ -32,11 +32,11 @@ func Workflow(Parms *structures.Parms) {
 
 		switch Parms.Subcommand {
 		case "build":
-			workflowBuild(true, Parms)
+			workflowBuild(true, Parms, 0)
 		case "publish":
-			workflowPublish(true, Parms)
+			workflowPublish(true, Parms, 0)
 		case "release":
-			workflowRelease(true, Parms)
+			workflowRelease(true, Parms, 0)
 		default:
 			cli.Error(RC.Error, *Parms, "Workflow desconocido: %q", Parms.Subcommand)
 		}
@@ -44,53 +44,57 @@ func Workflow(Parms *structures.Parms) {
 }
 
 // workflowBuild builds and commits when standalone or used as a checkpoint.
-func workflowBuild(standalone bool, Parms *structures.Parms) {
+func workflowBuild(standalone bool, Parms *structures.Parms, depth int) {
 	Parms.LastRC = RC.OK
-	Parms.Repos = Build(Parms)
+	Parms.Repos = Build(Parms, depth)
 	if !workflowContinuesAfterBuild(Parms.LastRC) {
 		Parms.Repos = nil
 		return
 	}
 	if standalone || Parms.Checkpoints {
-		Parms.Repos = Commit(Parms)
+		Parms.Repos = Commit(Parms, depth+1)
 	}
 }
 
 // workflowPublish optionally builds first, publishes and commits when required.
-func workflowPublish(standalone bool, Parms *structures.Parms) {
+func workflowPublish(standalone bool, Parms *structures.Parms, depth int) {
 	if Parms.All {
-		workflowBuild(false, Parms)
+		workflowBuild(false, Parms, depth)
 	}
 	if len(Parms.Repos) == 0 {
 		return
 	}
 
-	workflowRunStage(Parms, Publish, Parms.All)
+	workflowRunStage(Parms, func(parms *structures.Parms) []string {
+		return Publish(parms, depth)
+	}, Parms.All)
 	if len(Parms.Repos) == 0 {
 		return
 	}
 
 	if standalone || Parms.Checkpoints {
-		Parms.Repos = Commit(Parms)
+		Parms.Repos = Commit(Parms, depth+1)
 	}
 }
 
 // workflowRelease optionally runs previous stages, releases and commits when required.
-func workflowRelease(standalone bool, Parms *structures.Parms) {
+func workflowRelease(standalone bool, Parms *structures.Parms, depth int) {
 	if Parms.All {
-		workflowPublish(false, Parms)
+		workflowPublish(false, Parms, depth)
 	}
 	if len(Parms.Repos) == 0 {
 		return
 	}
 
-	workflowRunStage(Parms, Release, Parms.All)
+	workflowRunStage(Parms, func(parms *structures.Parms) []string {
+		return Release(parms, depth)
+	}, Parms.All)
 	if len(Parms.Repos) == 0 {
 		return
 	}
 
 	if standalone || Parms.Checkpoints {
-		Parms.Repos = Commit(Parms)
+		Parms.Repos = Commit(Parms, depth+1)
 	}
 }
 

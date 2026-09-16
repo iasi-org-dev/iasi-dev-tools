@@ -2,11 +2,9 @@ package runners
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"iasi-dev/internal/cli"
 	"iasi-dev/internal/commands"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
@@ -14,7 +12,7 @@ import (
 
 // Build processes each discovered IASI target and delegates its build through
 // the type:builder dispatcher.
-func Build(Parms *structures.Parms) []string {
+func Build(Parms *structures.Parms, depth int) []string {
 	if Parms.Debug {
 		fmt.Printf("Build: targets=%v\n", Parms.TargetDetails)
 	}
@@ -25,11 +23,8 @@ func Build(Parms *structures.Parms) []string {
 		if target.Repository != "" && isBlackListed(*Parms, target.Repository) {
 			continue
 		}
-		if Parms.Subcommand == "" {
-			cli.Header(*Parms, "%sBuild %s [%s]", targetIndent(target), filepath.Base(target.Path), target.Type)
-		}
 
-		rc := dispatchBuild(target, *Parms)
+		rc := dispatchBuild(target, *Parms, depth)
 		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
@@ -52,19 +47,16 @@ func Build(Parms *structures.Parms) []string {
 	return repositories
 }
 
-func dispatchBuild(target structures.Target, Parms structures.Parms) int {
+func dispatchBuild(target structures.Target, Parms structures.Parms, depth int) int {
 	targetType := strings.ToLower(strings.TrimSpace(target.Type))
+
 	switch targetType {
-	case "repository":
-		return RC.NothingToDo
 	case "software":
-		cli.Step(Parms, "%sBuilding", targetIndent(target))
-		return buildSoftware(target, Parms)
-	case "r", "quarto", "book", "guide":
-		cli.Step(Parms, "%sBuilding", targetIndent(target))
+		return buildSoftware(target, Parms, depth)
+	case "r", "quarto", "book", "guide", "website":
+		targetMessage(Parms, target, depth, "Build", "Building")
 		return buildR(target.Path, Parms)
 	default:
-		cli.Warning(Parms, "Build no soportado para %s: type=%s", filepath.Base(target.Path), targetType)
 		return RC.NothingToDo
 	}
 }
