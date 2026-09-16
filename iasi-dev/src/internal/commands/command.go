@@ -105,8 +105,12 @@ func command(directory string, friendly bool, logFile *os.File, name string, arg
 
 // commandLogged executes a generic command, logs it and writes its output directly to the log.
 func commandLogged(directory string, friendly bool, logFile *os.File, name string, args ...string) structures.Result {
+	return commandLoggedEnv(directory, friendly, logFile, nil, name, args...)
+}
+
+func commandLoggedEnv(directory string, friendly bool, logFile *os.File, environment []string, name string, args ...string) structures.Result {
 	if debug {
-		fmt.Printf("commandLogged: directory=%s friendly=%t name=%s args=%v\n", directory, friendly, name, args)
+		fmt.Printf("commandLoggedEnv: directory=%s friendly=%t env=%v name=%s args=%v\n", directory, friendly, environment, name, args)
 	}
 
 	if name == "Rscript" && len(args) >= 2 && args[0] == "-e" {
@@ -114,13 +118,16 @@ func commandLogged(directory string, friendly bool, logFile *os.File, name strin
 		args[1] = "options(warn = 1); " + args[1]
 	}
 
-	writeCommand(logFile, directory, name, args...)
+	writeCommandEnv(logFile, directory, environment, name, args...)
 	if dryRun {
 		return structures.Result{RC: RC.OK}
 	}
 
 	cmd := exec.Command(name, args...)
 	cmd.Dir = directory
+	if len(environment) != 0 {
+		cmd.Env = append(os.Environ(), environment...)
+	}
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 
@@ -144,16 +151,32 @@ func commandLogged(directory string, friendly bool, logFile *os.File, name strin
 
 // writeCommand writes the complete command to the log and mirrors it during dry-run.
 func writeCommand(logFile *os.File, directory string, name string, args ...string) {
+	writeCommandEnv(logFile, directory, nil, name, args...)
+}
+
+func writeCommandEnv(logFile *os.File, directory string, environment []string, name string, args ...string) {
 	commandLine := name
-	if len(args) != 0 { commandLine += " " + formatCommandArguments(args) }
-	if logFile != nil { fmt.Fprintf(logFile, "%s - Command [%s]: %s\n", time.Now().Format("15:04:05"), directory, commandLine) }
-	if dryRun { cli.Preview("Command [%s]: %s\n", directory, commandLine) }
+	if len(args) != 0 {
+		commandLine += " " + formatCommandArguments(args)
+	}
+	if len(environment) != 0 {
+		commandLine = strings.Join(environment, " ") + " " + commandLine
+	}
+	if logFile != nil {
+		fmt.Fprintf(logFile, "%s - Command [%s]: %s\n", time.Now().Format("15:04:05"), directory, commandLine)
+	}
+	if dryRun {
+		cli.Preview("Command [%s]: %s\n", directory, commandLine)
+	}
 }
 
 func formatCommandArguments(args []string) string {
 	formatted := make([]string, 0, len(args))
 	for _, arg := range args {
-		if strings.ContainsAny(arg, " \t\"") { formatted = append(formatted, strconv.Quote(arg)); continue }
+		if strings.ContainsAny(arg, " \t\"") {
+			formatted = append(formatted, strconv.Quote(arg))
+			continue
+		}
 		formatted = append(formatted, arg)
 	}
 	return strings.Join(formatted, " ")

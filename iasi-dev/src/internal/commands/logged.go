@@ -22,3 +22,11 @@ func RunFriendlyLogged(directory string, logFile *os.File, name string, args ...
 	}
 	return commandLogged(directory, true, logFile, name, args...)
 }
+
+// RunLoggedEnv executes a command with additional environment variables and writes its output to the log.
+func RunLoggedEnv(directory string, logFile *os.File, environment []string, name string, args ...string) structures.Result {
+	if debug {
+		fmt.Printf("RunLoggedEnv: directory=%s env=%v name=%s args=%v\n", directory, environment, name, args)
+	}
+	return commandLoggedEnv(directory, false, logFile, environment, name, args...)
+}

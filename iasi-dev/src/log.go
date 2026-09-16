@@ -53,6 +53,7 @@ func logParms(Parms structures.Parms) {
 	fmt.Fprintf(&output, "Tolerant: %t\n", Parms.Tolerant)
 	fmt.Fprintf(&output, "Message: %q\n", Parms.Message)
 	fmt.Fprintf(&output, "Format: %q\n", Parms.Format)
+	writeStringSlice(&output, "Platforms", Parms.Platforms)
 	fmt.Fprintf(&output, "Path: %q\n", Parms.Path)
 	fmt.Fprintf(&output, "LogDir: %q\n", Parms.LogDir)
 	fmt.Fprintf(&output, "Organization: %q\n", Parms.Organization)

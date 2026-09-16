@@ -1,5 +1,6 @@
 project:
-  type: guide
+  type: book
+  output-dir: _outputs  
 
 profile:
   default: html

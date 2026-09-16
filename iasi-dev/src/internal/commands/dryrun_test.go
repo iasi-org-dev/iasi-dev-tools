@@ -51,11 +51,15 @@ func TestDryRunGitStatusDoesNotBecomeNothingToDo(t *testing.T) {
 func TestDryRunMirrorsCommandInOneLine(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "dry-run.log")
 	logFile, err := os.Create(logPath)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer logFile.Close()
 
 	read, write, err := os.Pipe()
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer read.Close()
 
 	old := os.Stdout
@@ -65,11 +69,19 @@ func TestDryRunMirrorsCommandInOneLine(t *testing.T) {
 	SetDryRun(true)
 	defer SetDryRun(false)
 	Run("C:/workspace", logFile, "tool", "one", "two words")
-	if err := write.Close(); err != nil { t.Fatal(err) }
+	if err := write.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	console, err := io.ReadAll(read)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	text := string(console)
-	if !strings.Contains(text, `Command [C:/workspace]: tool one "two words"`) { t.Fatalf("dry-run command not mirrored as one line: %q", text) }
-	if strings.Count(strings.TrimSpace(text), "\n") != 0 { t.Fatalf("dry-run command spans multiple lines: %q", text) }
+	if !strings.Contains(text, `Command [C:/workspace]: tool one "two words"`) {
+		t.Fatalf("dry-run command not mirrored as one line: %q", text)
+	}
+	if strings.Count(strings.TrimSpace(text), "\n") != 0 {
+		t.Fatalf("dry-run command spans multiple lines: %q", text)
+	}
 }

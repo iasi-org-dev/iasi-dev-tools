@@ -17,6 +17,7 @@ type Parms struct {
 	Tolerant               bool     // Continúa cuando una operación falla.
 	Message                string   // Mensaje utilizado para el commit.
 	Format                 string   // Formato o formatos de salida.
+	Platforms              []string // Plataformas preparadas para build; por defecto windows y linux.
 	Path                   string   // Directorio de trabajo solicitado con --path.
 	LogDir                 string   // Directorio de logs solicitado con --log.
 	Organization           string   // Organización GitHub explícita o deducida del workspace.

@@ -1,5 +1,5 @@
 type: software
 builder: go
-name: iasi-dev
+name: iasi-scripts
 input-dir: src
 output-dir: ../bin

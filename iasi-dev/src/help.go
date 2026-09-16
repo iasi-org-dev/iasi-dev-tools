@@ -6,8 +6,8 @@ func printHelp() {
 	cli.Direct(`IASI Dev
 	
 	Usage:
-	  iasi-dev <command> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-p] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--message value] [target...]
-	  iasi-dev workflow <build|publish|release> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--message value] [target...]
+	  iasi-dev <command> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-p] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
+	  iasi-dev workflow <build|publish|release> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
 	  iasi-dev workflow promote vMAJOR.MINOR.PATCH [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
 	  iasi-dev workflow promote -p [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev promote vMAJOR.MINOR.PATCH [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
@@ -18,7 +18,7 @@ func printHelp() {
 	
 	Commands:
 	  help         Show help
-	  build        Build through iasi.quarto
+	  build        Build discovered IASI targets through their configured builders
 	  publish      Publish through iasi.quarto
 	  release      Release through iasi.quarto
 	  commit       Commit selected repositories
@@ -55,6 +55,7 @@ func printHelp() {
 	  --path value               Change to this directory before resolving projects.
 	  --exclude value[,value]*  Add exclusions. Existing files are read one exclusion per line; .git, .github and tests are always excluded.
 	  --format value            Output format passed to build.
+	  --platform value          Build only the selected platform: windows or linux. Without it, build prepares both.
 	  --message value           Commit message.
 	  --log directory           Directory where execution logs are written.
 	`)

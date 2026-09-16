@@ -2,11 +2,9 @@ package args
 
 import (
 	"bufio"
-	"encoding/binary"
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf16"
 
 	"iasi-dev/internal/cli"
 	"iasi-dev/internal/consts"
@@ -225,6 +223,8 @@ func validateParameter(Parms *structures.Parms, name string, value string) {
 		Parms.LogDir = value
 	case "path":
 		Parms.Path = value
+	case "platform":
+		Parms.Platforms = []string{strings.ToLower(strings.TrimSpace(value))}
 	default:
 		invalidArgument(Parms, "--"+name)
 	}
@@ -240,7 +240,23 @@ func missingParameterValue(Parms *structures.Parms, parameter string) {
 
 // Prepare resolves the requested scope, discovers Git repositories and IASI targets.
 func Prepare(Parms *structures.Parms) {
+	preparePlatforms(Parms)
 	processTargets(Parms)
+}
+
+func preparePlatforms(Parms *structures.Parms) {
+	if len(Parms.Platforms) == 0 {
+		Parms.Platforms = []string{"windows", "linux"}
+		return
+	}
+
+	for _, platform := range Parms.Platforms {
+		switch strings.ToLower(strings.TrimSpace(platform)) {
+		case "windows", "linux":
+		default:
+			cli.Error(RC.Error, *Parms, "Plataforma no soportada: %q", platform)
+		}
+	}
 }
 
 func processExclusions(Parms *structures.Parms, values string) {
@@ -326,16 +342,30 @@ func processTargets(Parms *structures.Parms) {
 	Parms.TargetDetails = describeTargets(Parms.Targets)
 }
 
-// describeTargets reads the literal type from each IASI marker and derives the
-// project hierarchy from discovered ancestor targets.
+// describeTargets reads the small flat target configuration needed by iasi-dev
+// and derives the project hierarchy from discovered ancestor targets.
 func describeTargets(targets []string) []structures.Target {
 	details := make([]structures.Target, 0, len(targets))
 	for _, path := range targets {
+		config := readTargetConfig(path)
+		targetType := strings.TrimSpace(config["type"])
+		if targetType == "" {
+			targetType = "none"
+		}
+
 		detail := structures.Target{
 			Path:       filepath.Clean(path),
-			Type:       targetType(path),
+			Type:       targetType,
+			Builder:    strings.TrimSpace(config["builder"]),
 			Repository: tools.FindRepo(path),
 		}
+
+		if strings.EqualFold(targetType, "software") {
+			detail.SourceDir = configValue(config, "source-dir", "src")
+			detail.OutputDir = configValue(config, "output-dir", "_outputs")
+			detail.Name = configValue(config, "name", defaultTargetName(filepath.Base(path)))
+		}
+
 		for _, ancestor := range targets {
 			if isAncestorTarget(ancestor, path) {
 				detail.Depth++
@@ -344,6 +374,32 @@ func describeTargets(targets []string) []structures.Target {
 		details = append(details, detail)
 	}
 	return details
+}
+
+func configValue(config map[string]string, name string, fallback string) string {
+	value := strings.TrimSpace(config[name])
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func defaultTargetName(name string) string {
+	original := name
+	i := 0
+	for i < len(name) && name[i] >= '0' && name[i] <= '9' {
+		i++
+	}
+	if i == 0 {
+		return name
+	}
+	for i < len(name) && (name[i] == '-' || name[i] == '_' || name[i] == '.' || name[i] == ' ') {
+		i++
+	}
+	if i >= len(name) {
+		return original
+	}
+	return name[i:]
 }
 
 func isAncestorTarget(parent string, child string) bool {
@@ -359,101 +415,57 @@ func isAncestorTarget(parent string, child string) bool {
 	return !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
-// targetType returns the literal type value from the target's IASI marker.
-// Both .iasi.yml and _iasi.yml are valid markers. Missing or empty type values
-// are reported as "none".
-func targetType(path string) string {
-	for _, name := range []string{".iasi.yml", "_iasi.yml"} {
-		marker := filepath.Join(path, name)
-		info, err := os.Stat(marker)
-		if err != nil || info.IsDir() {
-			continue
-		}
-		if value := readTargetType(marker); value != "" {
-			return value
-		}
-		return "none"
+// readTargetConfig intentionally reads only the flat scalar keys currently
+// needed by iasi-dev. The on-disk configuration format is transitional.
+func readTargetConfig(path string) map[string]string {
+	config := map[string]string{}
+	marker := targetMarker(path)
+	if marker == "" {
+		return config
 	}
-	return "none"
-}
 
-func readTargetType(path string) string {
-	data, err := os.ReadFile(path)
+	file, err := os.Open(marker)
 	if err != nil {
-		return ""
+		return config
 	}
+	defer file.Close()
 
-	scanner := bufio.NewScanner(strings.NewReader(decodeIASIMarker(data)))
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(strings.TrimPrefix(scanner.Text(), "\ufeff"))
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		separator := strings.Index(line, ":")
-		if separator < 0 || !strings.EqualFold(strings.TrimSpace(line[:separator]), "type") {
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
 			continue
 		}
-		return strings.TrimSpace(line[separator+1:])
+		key := strings.ToLower(strings.TrimSpace(parts[0]))
+		value := strings.TrimSpace(parts[1])
+		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'')) {
+			value = value[1 : len(value)-1]
+		}
+		config[key] = value
+	}
+	return config
+}
+
+func targetType(path string) string {
+	value := strings.TrimSpace(readTargetConfig(path)["type"])
+	if value == "" {
+		return "none"
+	}
+	return value
+}
+
+func targetMarker(path string) string {
+	for _, name := range []string{".iasi.yml", "_iasi.yml"} {
+		marker := filepath.Join(path, name)
+		if info, err := os.Stat(marker); err == nil && !info.IsDir() {
+			return marker
+		}
 	}
 	return ""
-}
-
-// decodeIASIMarker accepts the UTF-8 used normally by IASI and also UTF-16
-// files that can be produced by Windows tooling such as legacy PowerShell.
-func decodeIASIMarker(data []byte) string {
-	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
-		return string(data[3:])
-	}
-	if len(data) >= 2 && data[0] == 0xFF && data[1] == 0xFE {
-		return decodeUTF16(data[2:], binary.LittleEndian)
-	}
-	if len(data) >= 2 && data[0] == 0xFE && data[1] == 0xFF {
-		return decodeUTF16(data[2:], binary.BigEndian)
-	}
-	if order, ok := utf16ByteOrderWithoutBOM(data); ok {
-		return decodeUTF16(data, order)
-	}
-	return string(data)
-}
-
-// utf16ByteOrderWithoutBOM recognises the common ASCII-heavy UTF-16 layout
-// used by YAML even when the file has no byte-order mark.
-func utf16ByteOrderWithoutBOM(data []byte) (binary.ByteOrder, bool) {
-	pairs := len(data) / 2
-	if pairs < 2 {
-		return nil, false
-	}
-
-	evenZeros := 0
-	oddZeros := 0
-	for i := 0; i < pairs*2; i += 2 {
-		if data[i] == 0 {
-			evenZeros++
-		}
-		if data[i+1] == 0 {
-			oddZeros++
-		}
-	}
-
-	threshold := pairs / 2
-	if oddZeros > threshold && evenZeros <= threshold/2 {
-		return binary.LittleEndian, true
-	}
-	if evenZeros > threshold && oddZeros <= threshold/2 {
-		return binary.BigEndian, true
-	}
-	return nil, false
-}
-
-func decodeUTF16(data []byte, order binary.ByteOrder) string {
-	if len(data)%2 != 0 {
-		data = data[:len(data)-1]
-	}
-	units := make([]uint16, len(data)/2)
-	for i := range units {
-		units[i] = order.Uint16(data[i*2 : i*2+2])
-	}
-	return string(utf16.Decode(units))
 }
 
 // discoverIASITargets recursively finds directories containing a ?iasi.yml marker.

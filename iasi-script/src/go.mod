@@ -1,4 +1,4 @@
-module iasi-builder
+module iasi-script
 
 go 1.23
 

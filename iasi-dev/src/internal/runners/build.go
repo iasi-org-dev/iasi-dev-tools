@@ -12,8 +12,8 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Build processes discovered IASI targets in iasi-dev. For now only targets
-// declaring type: r are delegated to the existing R implementation.
+// Build processes each discovered IASI target and delegates its build through
+// the type:builder dispatcher.
 func Build(Parms *structures.Parms) []string {
 	if Parms.Debug {
 		fmt.Printf("Build: targets=%v\n", Parms.TargetDetails)
@@ -29,16 +29,14 @@ func Build(Parms *structures.Parms) []string {
 			cli.Header(*Parms, "%sBuild %s [%s]", targetIndent(target), filepath.Base(target.Path), target.Type)
 		}
 
-		if !targetUsesR(target) {
+		rc := dispatchBuild(target, *Parms)
+		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
-		processed = true
-		cli.Step(*Parms, "%sBuilding", targetIndent(target))
 
-		rc := buildTarget(target.Path, *Parms)
+		processed = true
 		Parms.LastRC = rc
-		handled := handleRC(Parms, rc)
-		if RC.Has(handled, RC.Skip) {
+		if RC.Has(handleRC(Parms, rc), RC.Skip) {
 			if target.Repository != "" {
 				addToBlackList(Parms, target.Repository)
 			}
@@ -54,7 +52,22 @@ func Build(Parms *structures.Parms) []string {
 	return repositories
 }
 
-func buildTarget(target string, Parms structures.Parms) int {
+func dispatchBuild(target structures.Target, Parms structures.Parms) int {
+	targetType := strings.ToLower(strings.TrimSpace(target.Type))
+	switch targetType {
+	case "repository":
+		return RC.NothingToDo
+	case "software":
+		return buildSoftware(target, Parms)
+	case "r", "quarto", "book", "guide":
+		return buildR(target.Path, Parms)
+	default:
+		cli.Warning(Parms, "Build no soportado para %s: type=%s", filepath.Base(target.Path), targetType)
+		return RC.NothingToDo
+	}
+}
+
+func buildR(target string, Parms structures.Parms) int {
 	parameters := []string{}
 
 	if Parms.Format != "" {

@@ -137,34 +137,57 @@ func TestPrepareDescribesTargetTypesAndDepth(t *testing.T) {
 	}
 }
 
-func TestTargetTypeReadsDotIASIYAMLInUTF16LE(t *testing.T) {
+func TestPrepareReadsSoftwareBuildConfiguration(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, ".iasi.yml")
-	text := "type: software\r\n"
-	encoded := []byte{0xFF, 0xFE}
-	for _, r := range text {
-		encoded = append(encoded, byte(r), byte(r>>8))
-	}
-	if err := os.WriteFile(path, encoded, 0644); err != nil {
+	project := filepath.Join(root, "01-compiler")
+	if err := os.MkdirAll(project, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if got := targetType(root); got != "software" {
-		t.Fatalf("targetType(.iasi.yml UTF-16LE) = %q, want software", got)
+	config := "type: software\n\nbuilder: go\n\nsource-dir: code\noutput-dir: ../bin\nname: compiler-x\n"
+	if err := os.WriteFile(filepath.Join(project, ".iasi.yml"), []byte(config), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	parms := structures.Parms{Targets: []string{project}, Exclusions: append([]string{}, consts.RequiredExclusions...)}
+	Prepare(&parms)
+	if len(parms.TargetDetails) != 1 {
+		t.Fatalf("TargetDetails = %v", parms.TargetDetails)
+	}
+	target := parms.TargetDetails[0]
+	if target.Type != "software" || target.Builder != "go" || target.SourceDir != "code" || target.OutputDir != "../bin" || target.Name != "compiler-x" {
+		t.Fatalf("target = %+v", target)
 	}
 }
 
-func TestTargetTypeReadsDotIASIYAMLInUTF16LEWithoutBOM(t *testing.T) {
+func TestPrepareAppliesSoftwareDefaults(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, ".iasi.yml")
-	text := "type: software\r\n\r\nbuilder: go\r\n\r\noutput-dir: ../bin\r\n"
-	encoded := make([]byte, 0, len(text)*2)
-	for _, r := range text {
-		encoded = append(encoded, byte(r), byte(r>>8))
-	}
-	if err := os.WriteFile(path, encoded, 0644); err != nil {
+	project := filepath.Join(root, "02-my-tool")
+	if err := os.MkdirAll(project, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if got := targetType(root); got != "software" {
-		t.Fatalf("targetType(.iasi.yml UTF-16LE without BOM) = %q, want software", got)
+	if err := os.WriteFile(filepath.Join(project, ".iasi.yml"), []byte("type: software\nbuilder: go\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	parms := structures.Parms{Targets: []string{project}, Exclusions: append([]string{}, consts.RequiredExclusions...)}
+	Prepare(&parms)
+	target := parms.TargetDetails[0]
+	if target.SourceDir != "src" || target.OutputDir != "_outputs" || target.Name != "my-tool" {
+		t.Fatalf("defaults = source %q output %q name %q", target.SourceDir, target.OutputDir, target.Name)
+	}
+	if !reflect.DeepEqual(parms.Platforms, []string{"windows", "linux"}) {
+		t.Fatalf("Platforms = %v", parms.Platforms)
+	}
+}
+
+func TestPrepareKeepsRequestedPlatform(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".iasi.yml"), []byte("type: software\nbuilder: go\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	parms := structures.Parms{Targets: []string{root}, Platforms: []string{"linux"}, Exclusions: append([]string{}, consts.RequiredExclusions...)}
+	Prepare(&parms)
+	if !reflect.DeepEqual(parms.Platforms, []string{"linux"}) {
+		t.Fatalf("Platforms = %v", parms.Platforms)
 	}
 }
