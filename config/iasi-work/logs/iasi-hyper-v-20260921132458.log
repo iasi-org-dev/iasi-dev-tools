@@ -1,0 +1,8 @@
+﻿Configuration variable 'SourceISO' is required for installer 'kubuntu-live'.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\hyper-v.ps1: 325 Carácter: 9
++         throw "Configuration variable 'SourceISO' is required for ins ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Configuration v...'kubuntu-live'.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Configuration variable 'SourceISO' is required for installer 'kubuntu-live'.
+13:24:58 - Configuration variable 'SourceISO' is required for installer 'kubuntu-live'.
+13:24:58 - See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921132458.log

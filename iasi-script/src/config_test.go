@@ -7,15 +7,6 @@ import (
 	"testing"
 )
 
-func TestResolveConfigPathDefaultsToConfigToml(t *testing.T) {
-	workDir := filepath.Join("tmp", "project")
-	got := resolveConfigPath(workDir, Descriptor{})
-	want := filepath.Join(workDir, defaultConfigName)
-	if got != want {
-		t.Fatalf("resolveConfigPath() = %q, want %q", got, want)
-	}
-}
-
 func TestLoadDescriptorReadsBuildMetadata(t *testing.T) {
 	workDir := t.TempDir()
 	content := []byte(`type: software
@@ -23,8 +14,6 @@ builder: iasi-script
 name: iasi-net
 input-dir: src
 output-dir: ../../bin
-config: custom.toml
-
 targets:
   - powershell
   - bash
@@ -36,9 +25,6 @@ targets:
 	descriptor, err := loadDescriptor(workDir)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if descriptor.Config != "custom.toml" {
-		t.Fatalf("Config = %q, want custom.toml", descriptor.Config)
 	}
 	if descriptor.Name != "iasi-net" {
 		t.Fatalf("Name = %q, want iasi-net", descriptor.Name)

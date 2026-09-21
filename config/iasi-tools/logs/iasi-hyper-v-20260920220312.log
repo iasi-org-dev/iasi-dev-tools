@@ -1,0 +1,34 @@
+﻿22:03:12 - Removing existing virtual machine 'vm-iasi-tools'...
+22:03:12 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools]: wsl.exe sh -lc "command -v xorriso >/dev/null 2>&1"
+22:03:15 - Creating unattended Ubuntu ISO 'C:\discos\vm-iasi-tools.iso'...
+22:03:16 - Command [C:\discos]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso -extract /boot/grub/grub.cfg /mnt/c/discos/vm-iasi-tools-grub.cfg.tmp
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :    1195 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 1989719 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 1992425 data blocks, 3891m data,  111g free
+Volume id    : 'Ubuntu-Server 24.04.5 LTS amd64'
+xorriso : UPDATE :       1 files restored (   573b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/grub.cfg'='/mnt/c/discos/vm-iasi-tools-grub.cfg.tmp'
+Excepción al llamar a "WriteAllText" con los argumentos "3": "Acceso denegado a la ruta de acceso 'C:\discos\vm-iasi-tools-grub.cfg.tmp'."
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\iso.ps1: 84 Carácter: 9
++         [System.IO.File]::WriteAllText($GrubPath, $Grub, $UTF8)
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [], MethodInvocationException
+    + FullyQualifiedErrorId : UnauthorizedAccessException
+22:03:16 - Excepción al llamar a "WriteAllText" con los argumentos "3": "Acceso denegado a la ruta de acceso 'C:\discos\vm-iasi-tools-grub.cfg.tmp'."
+22:03:16 - See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools\logs\iasi-hyper-v-20260920220312.log

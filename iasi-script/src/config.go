@@ -16,7 +16,6 @@ const (
 )
 
 type Descriptor struct {
-	Config    string
 	Name      string
 	InputDir  string
 	OutputDir string
@@ -27,10 +26,6 @@ type Config struct {
 	Template  string            `toml:"template"`
 	Templates map[string]string `toml:"templates"`
 	Data      map[string]any    `toml:"-"`
-}
-
-func workDir() (string, error) {
-	return os.Getwd()
 }
 
 func descriptorPath(workDir string) (string, error) {
@@ -86,8 +81,6 @@ func loadDescriptor(workDir string) (Descriptor, error) {
 		value = cleanYAMLValue(value)
 
 		switch key {
-		case "config":
-			descriptor.Config = value
 		case "name":
 			descriptor.Name = value
 		case "input-dir":
@@ -111,17 +104,6 @@ func cleanYAMLValue(value string) string {
 		value = strings.TrimSpace(value[:i])
 	}
 	return strings.Trim(value, "\"'")
-}
-
-func resolveConfigPath(workDir string, descriptor Descriptor) string {
-	name := strings.TrimSpace(descriptor.Config)
-	if name == "" {
-		name = defaultConfigName
-	}
-	if filepath.IsAbs(name) {
-		return filepath.Clean(name)
-	}
-	return filepath.Join(workDir, name)
 }
 
 func loadConfig(path string) (Config, error) {

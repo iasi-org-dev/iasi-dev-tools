@@ -1,0 +1,38 @@
+﻿14:11:51 - Removing existing virtual machine 'vm-iasi-work'...
+14:11:51 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work]: wsl.exe sh -lc "command -v xorriso >/dev/null 2>&1"
+14:11:54 - Preparing Calamares live environment...
+14:11:55 - Creating Calamares live ISO with IASI network configuration...
+14:11:55 - Command [c:\tmp\vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso -extract /boot/grub/grub.cfg /mnt/c/tmp/vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb/grub.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :     908 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 2339356 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 2342062 data blocks, 4574m data, 98.2g free
+Volume id    : 'Kubuntu 24.04.4 LTS amd64'
+xorriso : UPDATE :       1 files restored (   741b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb/grub.cfg'
+14:11:55 - Command [c:\tmp\vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb]: wsl.exe chmod u+w -- /mnt/c/tmp/vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb/grub.cfg
+14:11:55 - Command [c:\tmp\vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb]: wsl.exe sed -i -E -e "s|^([[:space:]]*linux[[:space:]]+.*)[[:space:]]+---[[:space:]]*$|\1 ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 nameserver=1.1.1.1 nameserver=8.8.8.8 ---|" /mnt/c/tmp/vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb/grub.cfg
+14:11:55 - Command [c:\tmp\vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb]: wsl.exe grep -Fq ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 /mnt/c/tmp/vm-iasi-work-calamares-99f18d9e538745eead12e6115f1b7ceb/grub.cfg
+IASI live-network parameters were not added to grub.cfg.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\iso.ps1: 199 Carácter: 13
++             throw "IASI live-network parameters were not added to gru ...
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (IASI live-netwo...ed to grub.cfg.:String) [], RuntimeException
+    + FullyQualifiedErrorId : IASI live-network parameters were not added to grub.cfg.
+14:11:55 - IASI live-network parameters were not added to grub.cfg.
+14:11:55 - See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141151.log

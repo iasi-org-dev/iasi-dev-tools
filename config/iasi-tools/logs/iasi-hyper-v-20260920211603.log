@@ -1,0 +1,65 @@
+﻿21:16:03 - Removing existing virtual machine 'vm-iasi-tools'...
+21:16:04 - Creating seed ISO from 'C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools'...
+21:16:04 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools]: C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe -lCIDATA -u2 -udfver102 C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools C:\Maquinas\vm-iasi-tools\vm-iasi-tools-seed.iso
+
+
+OSCDIMG 2.56 CD-ROM and DVD-ROM Premastering Utility
+
+Copyright (C) Microsoft, 1993-2012. All rights reserved.
+
+Licensed only for producing Microsoft authorized content.
+
+
+
+
+
+Scanning source tree 
+
+Scanning source tree complete (4 files in 3 directories)
+
+
+
+Computing directory information 
+Computing directory information complete
+
+
+
+Image file is 655360 bytes 
+
+
+
+Writing 4 files in 3 directories to C:\Maquinas\vm-iasi-tools\vm-iasi-tools-seed.iso
+
+
+
+oscdimg.exe : 0% complete
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 40 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (0% complete:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2% complete
+0% complete
+3% complete
+1% complete
+
+
+Final image file is 663552 bytes
+
+
+
+Done.
+
+3% complete
+100% complete
+21:16:04 - Creating virtual machine 'vm-iasi-tools'...
+21:16:06 - Starting virtual machine 'vm-iasi-tools'...
+21:16:07 - Virtual machine 'vm-iasi-tools' started.
+21:16:07 - Virtual machine: vm-iasi-tools
+21:16:07 - Path:            C:\Maquinas\vm-iasi-tools
+21:16:07 - VHDX:            C:\Maquinas\vm-iasi-tools\vm-iasi-tools.vhdx
+21:16:07 - Ubuntu ISO:      C:\discos\ubuntu-24.04.5-live-server-amd64.iso
+21:16:07 - Seed ISO:        C:\Maquinas\vm-iasi-tools\vm-iasi-tools-seed.iso
+21:16:07 - Switch:          iasi-net
+21:16:07 - Log:             C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools\logs\iasi-hyper-v-20260920211603.log

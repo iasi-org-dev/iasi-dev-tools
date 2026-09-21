@@ -1,0 +1,131 @@
+﻿22:12:24 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools]: wsl.exe sh -lc "command -v xorriso >/dev/null 2>&1"
+22:12:27 - Creating unattended Ubuntu ISO...
+22:12:27 - Command [c:\tmp\vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso -extract /boot/grub/grub.cfg /mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :    1195 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 1989719 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 1992425 data blocks, 3891m data,  111g free
+Volume id    : 'Ubuntu-Server 24.04.5 LTS amd64'
+xorriso : UPDATE :       1 files restored (   573b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg'
+22:12:27 - Command [c:\tmp\vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466]: wsl.exe chmod u+w -- /mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg
+22:12:27 - Command [c:\tmp\vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466]: wsl.exe sed -i -E -e "s/^set timeout=.*/set timeout=0/" -e "s|^([[:space:]]*linux[[:space:]]+[^[:space:]]+[[:space:]]+)---[[:space:]]*$|\1autoinstall ---|" /mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg
+22:12:27 - Command [c:\tmp\vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466]: wsl.exe grep -Eq ^[[:space:]]*linux[[:space:]]+[^[:space:]]+[[:space:]]+autoinstall[[:space:]]+---[[:space:]]*$ /mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg
+22:12:27 - Command [c:\tmp\vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466]: wsl.exe xorriso -indev /mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso -outdev /mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools.iso -boot_image any replay -map /mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg /boot/grub/grub.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :    1195 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 1989719 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 1992425 data blocks, 3891m data,  111g free
+Volume id    : 'Ubuntu-Server 24.04.5 LTS amd64'
+Drive current: -outdev '/mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data,  111g free
+xorriso : WARNING : -volid text problematic as automatic mount point name
+xorriso : WARNING : -volid text does not comply to ISO 9660 / ECMA 119 rules
+xorriso : NOTE : Replayed 22 boot related commands
+xorriso : UPDATE :       1 files added in 1 seconds
+Added to ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-tools-iso-3662319bbee942a1974c595e95a21466/grub.cfg'
+xorriso : NOTE : Copying to System Area: 32768 bytes from file '--interval:imported_iso:0s-15s:zero_mbrpt,zero_gpt:/mnt/c/discos/ubuntu-24.04.5-live-server-amd64.iso'
+xorriso : UPDATE : Writing:       5408s    0.3%   fifo   0%  buf  50%
+xorriso : UPDATE : Writing:      44160s    2.2%   fifo   0%  buf  50%   63.6xD 
+xorriso : UPDATE : Writing:      94736s    4.8%   fifo   0%  buf  50%   74.7xD 
+xorriso : UPDATE : Writing:     153921s    7.7%   fifo   0%  buf  50%   87.4xD 
+xorriso : UPDATE : Writing:     215392s   10.8%   fifo   4%  buf  50%   90.8xD 
+xorriso : UPDATE : Writing:     276880s   13.9%   fifo   0%  buf  50%   90.8xD 
+xorriso : UPDATE : Writing:     336400s   16.9%   fifo  15%  buf  50%   87.9xD 
+xorriso : UPDATE : Writing:     393296s   19.7%   fifo  25%  buf  50%   84.1xD 
+xorriso : UPDATE : Writing:     451584s   22.7%   fifo  13%  buf  50%   86.1xD 
+xorriso : UPDATE : Writing:     507904s   25.5%   fifo   0%  buf  50%   83.2xD 
+xorriso : UPDATE : Writing:     562194s   28.2%   fifo   0%  buf  50%   80.2xD 
+xorriso : UPDATE : Writing:     619762s   31.1%   fifo   0%  buf  50%   85.0xD 
+xorriso : UPDATE : Writing:     676992s   34.0%   fifo   0%  buf  50%   84.5xD 
+xorriso : UPDATE : Writing:     733266s   36.8%   fifo   0%  buf  50%   83.1xD 
+xorriso : UPDATE : Writing:     789728s   39.6%   fifo   0%  buf  50%   83.4xD 
+xorriso : UPDATE : Writing:     847488s   42.5%   fifo   0%  buf  50%   85.3xD 
+xorriso : UPDATE : Writing:     907664s   45.6%   fifo   0%  buf  50%   88.9xD 
+xorriso : UPDATE : Writing:     967552s   48.6%   fifo  19%  buf  50%   88.5xD 
+xorriso : UPDATE : Writing:    1025456s   51.5%   fifo  12%  buf  50%   85.5xD 
+xorriso : UPDATE : Writing:    1085376s   54.5%   fifo   0%  buf  50%   88.5xD 
+xorriso : UPDATE : Writing:    1144016s   57.4%   fifo   0%  buf  50%   86.6xD 
+xorriso : UPDATE : Writing:    1203744s   60.4%   fifo   0%  buf  50%   88.2xD 
+xorriso : UPDATE : Writing:    1262640s   63.4%   fifo  23%  buf  50%   85.8xD 
+xorriso : UPDATE : Writing:    1317056s   66.1%   fifo   0%  buf  50%   82.6xD 
+xorriso : UPDATE : Writing:    1374512s   69.0%   fifo   0%  buf  50%   79.9xD 
+xorriso : UPDATE : Writing:    1427408s   71.7%   fifo   8%  buf  50%   80.5xD 
+xorriso : UPDATE : Writing:    1479376s   74.3%   fifo   0%  buf  50%   79.4xD 
+xorriso : UPDATE : Writing:    1529552s   76.8%   fifo   0%  buf  50%   76.8xD 
+xorriso : UPDATE : Writing:    1586514s   79.6%   fifo   1%  buf  50%   78.2xD 
+xorriso : UPDATE : Writing:    1637408s   82.2%   fifo   0%  buf  50%   78.4xD 
+xorriso : UPDATE : Writing:    1688512s   84.8%   fifo  18%  buf  50%   77.9xD 
+xorriso : UPDATE : Writing:    1777776s   89.3%   fifo  25%  buf  50%  125.5xD 
+xorriso : UPDATE : Writing:    1831024s   91.9%   fifo   0%  buf  50%   77.2xD 
+xorriso : UPDATE : Writing:    1881760s   94.5%   fifo   0%  buf  50%   82.0xD 
+xorriso : UPDATE : Writing:    1939232s   97.4%   fifo   0%  buf  50%   84.9xD 
+ISO image produced: 1991718 sectors
+Written to medium : 1991888 sectors at LBA 48
+Writing to '/mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools.iso' completed successfully.
+22:13:02 - Unattended Ubuntu ISO created: c:\tmp\vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f\vm-iasi-tools.iso
+22:13:02 - Creating seed ISO...
+22:13:02 - Command [c:\tmp\vm-iasi-tools-seed-8383c702ecc34418a6bb5cc41818c4f2]: wsl.exe xorriso -as mkisofs -V CIDATA -J -R -o /mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools-seed.iso /mnt/c/tmp/vm-iasi-tools-seed-8383c702ecc34418a6bb5cc41818c4f2
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Drive current: -outdev 'stdio:/mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools-seed.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data,  108g free
+Added to ISO image: directory '/'='/mnt/c/tmp/vm-iasi-tools-seed-8383c702ecc34418a6bb5cc41818c4f2'
+xorriso : UPDATE :       4 files added in 1 seconds
+xorriso : UPDATE :       4 files added in 1 seconds
+ISO image produced: 186 sectors
+Written to medium : 186 sectors at LBA 0
+Writing to 'stdio:/mnt/c/tmp/vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f/vm-iasi-tools-seed.iso' completed successfully.
+22:13:02 - Seed ISO created: c:\tmp\vm-iasi-tools-media-ee73d40802cc45589175599e2c286f1f\vm-iasi-tools-seed.iso
+22:13:02 - Installation media ready: C:\discos\vm-iasi-tools.iso
+22:13:02 - Seed media ready: C:\discos\vm-iasi-tools-seed.iso
+22:13:02 - Creating virtual machine 'vm-iasi-tools'...
+22:13:05 - Starting virtual machine 'vm-iasi-tools'...
+22:13:08 - Virtual machine 'vm-iasi-tools' started.
+22:13:08 - Virtual machine: vm-iasi-tools
+22:13:08 - Path:            C:\Maquinas\vm-iasi-tools
+22:13:08 - VHDX:            C:\Maquinas\vm-iasi-tools\vm-iasi-tools.vhdx
+22:13:08 - Ubuntu ISO:      C:\discos\ubuntu-24.04.5-live-server-amd64.iso
+22:13:08 - Install ISO:     C:\discos\vm-iasi-tools.iso
+22:13:08 - Seed ISO:        C:\discos\vm-iasi-tools-seed.iso
+22:13:08 - Switch:          iasi-net
+22:13:08 - Log:             C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-tools\logs\iasi-hyper-v-20260920221224.log

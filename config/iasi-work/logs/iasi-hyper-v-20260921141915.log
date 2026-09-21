@@ -1,0 +1,169 @@
+﻿14:19:16 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work]: wsl.exe sh -lc "command -v xorriso >/dev/null 2>&1"
+14:19:19 - Preparing Calamares live environment...
+14:19:19 - Creating Calamares live ISO with IASI network configuration...
+14:19:19 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso -extract /boot/grub/grub.cfg /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :     908 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 2339356 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 2342062 data blocks, 4574m data, 97.9g free
+Volume id    : 'Kubuntu 24.04.4 LTS amd64'
+xorriso : UPDATE :       1 files restored (   741b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg'
+14:19:19 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe chmod u+w -- /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg
+14:19:19 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe grep -Fn /casper/vmlinuz /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg
+10:	linux	/casper/vmlinuz  --- quiet splash
+15:	linux	/casper/vmlinuz nomodeset  --- quiet splash
+20:	linux	/casper/vmlinuz  --- quiet splash oem-config/enable=true
+14:19:19 - Injecting IASI live-network parameters into '/boot/grub/grub.cfg'...
+14:19:19 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe sed -i -e "s|/casper/vmlinuz|/casper/vmlinuz ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 nameserver=1.1.1.1 nameserver=8.8.8.8|g" /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg
+14:19:19 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe grep -Fq ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso -extract /boot/grub/loopback.cfg /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :     908 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 2339356 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 2342062 data blocks, 4574m data, 97.9g free
+Volume id    : 'Kubuntu 24.04.4 LTS amd64'
+xorriso : UPDATE :       1 files restored (   506b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/loopback.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg'
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe chmod u+w -- /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe grep -Fn /casper/vmlinuz /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg
+4:	linux	/casper/vmlinuz  iso-scan/filename=${iso_path} --- quiet splash
+9:	linux	/casper/vmlinuz nomodeset  iso-scan/filename=${iso_path} --- quiet splash
+14:	linux	/casper/vmlinuz  iso-scan/filename=${iso_path} --- quiet splash oem-config/enable=true
+14:19:20 - Injecting IASI live-network parameters into '/boot/grub/loopback.cfg'...
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe sed -i -e "s|/casper/vmlinuz|/casper/vmlinuz ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 nameserver=1.1.1.1 nameserver=8.8.8.8|g" /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe grep -Fq ip=eth0,10.77.0.50,255.255.255.0,10.77.0.1 /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg
+14:19:20 - Command [c:\tmp\vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8]: wsl.exe xorriso -indev /mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso -outdev /mnt/c/discos/vm-iasi-work.iso -boot_image any replay -map /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg /boot/grub/grub.cfg -map /mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg /boot/grub/loopback.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :     908 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 2339356 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 2342062 data blocks, 4574m data, 97.9g free
+Volume id    : 'Kubuntu 24.04.4 LTS amd64'
+Drive current: -outdev '/mnt/c/discos/vm-iasi-work.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 97.9g free
+xorriso : WARNING : -volid text problematic as automatic mount point name
+xorriso : WARNING : -volid text does not comply to ISO 9660 / ECMA 119 rules
+xorriso : NOTE : Replayed 22 boot related commands
+xorriso : UPDATE :       1 files added in 1 seconds
+Added to ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/grub.cfg'
+xorriso : UPDATE :       1 files added in 1 seconds
+Added to ISO image: file '/boot/grub/loopback.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-92a0e1f14a38497f991215c3d7192fa8/loopback.cfg'
+xorriso : NOTE : Copying to System Area: 32768 bytes from file '--interval:imported_iso:0s-15s:zero_mbrpt,zero_gpt:/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+xorriso : UPDATE : Writing:       4016s    0.2%   fifo   1%  buf  50%
+xorriso : UPDATE : Writing:       8192s    0.3%   fifo  16%  buf  50%
+xorriso : UPDATE : Writing:      57024s    2.4%   fifo   0%  buf  50%   72.1xD 
+xorriso : UPDATE : Writing:     109344s    4.7%   fifo   0%  buf  50%   77.3xD 
+xorriso : UPDATE : Writing:     163840s    7.0%   fifo  23%  buf  50%   80.5xD 
+xorriso : UPDATE : Writing:     220192s    9.4%   fifo   0%  buf  50%   83.2xD 
+xorriso : UPDATE : Writing:     275968s   11.8%   fifo   0%  buf  50%   82.4xD 
+xorriso : UPDATE : Writing:     332624s   14.2%   fifo   1%  buf  50%   83.7xD 
+xorriso : UPDATE : Writing:     390731s   16.7%   fifo   0%  buf  50%   85.8xD 
+xorriso : UPDATE : Writing:     448608s   19.2%   fifo   0%  buf  50%   85.5xD 
+xorriso : UPDATE : Writing:     507904s   21.7%   fifo  17%  buf  50%   87.6xD 
+xorriso : UPDATE : Writing:     567680s   24.2%   fifo   5%  buf  50%   88.3xD 
+xorriso : UPDATE : Writing:     626752s   26.8%   fifo   0%  buf  50%   87.3xD 
+xorriso : UPDATE : Writing:     685472s   29.3%   fifo   0%  buf  50%   86.7xD 
+xorriso : UPDATE : Writing:     743232s   31.7%   fifo   0%  buf  50%   85.3xD 
+xorriso : UPDATE : Writing:     801232s   34.2%   fifo   1%  buf  50%   85.7xD 
+xorriso : UPDATE : Writing:     858112s   36.6%   fifo   0%  buf  50%   84.0xD 
+xorriso : UPDATE : Writing:     915840s   39.1%   fifo   0%  buf  50%   85.3xD 
+xorriso : UPDATE : Writing:     973867s   41.6%   fifo   0%  buf  50%   85.7xD 
+xorriso : UPDATE : Writing:    1031595s   44.1%   fifo   0%  buf  50%   85.3xD 
+xorriso : UPDATE : Writing:    1088944s   46.5%   fifo   1%  buf  50%   84.7xD 
+xorriso : UPDATE : Writing:    1146155s   48.9%   fifo   0%  buf  50%   84.5xD 
+xorriso : UPDATE : Writing:    1202688s   51.4%   fifo   0%  buf  50%   83.5xD 
+xorriso : UPDATE : Writing:    1260080s   53.8%   fifo   1%  buf  50%   84.8xD 
+xorriso : UPDATE : Writing:    1317552s   56.3%   fifo   1%  buf  50%   84.9xD 
+xorriso : UPDATE : Writing:    1374912s   58.7%   fifo   0%  buf  50%   84.7xD 
+xorriso : UPDATE : Writing:    1432139s   61.2%   fifo   1%  buf  50%   84.6xD 
+xorriso : UPDATE : Writing:    1489126s   63.6%   fifo   0%  buf  50%   84.2xD 
+xorriso : UPDATE : Writing:    1547408s   66.1%   fifo   1%  buf  50%   86.1xD 
+xorriso : UPDATE : Writing:    1597776s   68.2%   fifo  29%  buf  50%   81.7xD 
+xorriso : UPDATE : Writing:    1655520s   70.7%   fifo  20%  buf  50%   79.7xD 
+xorriso : UPDATE : Writing:    1706827s   72.9%   fifo   1%  buf  50%   79.8xD 
+xorriso : UPDATE : Writing:    1759888s   75.2%   fifo   1%  buf  50%   76.4xD 
+xorriso : UPDATE : Writing:    1816587s   77.6%   fifo   0%  buf  50%   83.7xD 
+xorriso : UPDATE : Writing:    1872640s   80.0%   fifo   0%  buf  50%   82.8xD 
+xorriso : UPDATE : Writing:    1928384s   82.3%   fifo   0%  buf  50%   82.4xD 
+xorriso : UPDATE : Writing:    1982464s   84.7%   fifo   5%  buf  50%   79.9xD 
+xorriso : UPDATE : Writing:    2036496s   87.0%   fifo   1%  buf  50%   79.8xD 
+xorriso : UPDATE : Writing:    2091120s   89.3%   fifo   6%  buf  50%   80.5xD 
+xorriso : UPDATE : Writing:    2145792s   91.6%   fifo   0%  buf  50%   80.5xD 
+xorriso : UPDATE : Writing:    2199787s   93.9%   fifo   0%  buf  50%   79.5xD 
+xorriso : UPDATE : Writing:    2254608s   96.3%   fifo   4%  buf  50%   80.8xD 
+xorriso : UPDATE : Writing:    2310560s   98.7%   fifo  20%  buf  50%   82.7xD 
+ISO image produced: 2341573 sectors
+Written to medium : 2341744 sectors at LBA 48
+Writing to '/mnt/c/discos/vm-iasi-work.iso' completed successfully.
+14:20:03 - Calamares live ISO created: C:\discos\vm-iasi-work.iso
+14:20:03 - Live network: 10.77.0.50/24 via 10.77.0.1 on eth0
+14:20:03 - Live DNS: 1.1.1.1, 8.8.8.8
+14:20:03 - Modified GRUB configuration: /boot/grub/grub.cfg, /boot/grub/loopback.cfg
+14:20:03 - Creating virtual machine 'vm-iasi-work'...
+14:20:05 - Starting virtual machine 'vm-iasi-work'...
+14:20:09 - Virtual machine 'vm-iasi-work' started.
+14:20:09 - Virtual machine: vm-iasi-work
+14:20:09 - Mode:            fixed
+14:20:09 - CPU:             4
+14:20:09 - Memory:          8 GB static
+14:20:09 - GPU:             disabled
+14:20:09 - Path:            C:\Maquinas\vm-iasi-work
+14:20:09 - VHDX:            C:\Maquinas\vm-iasi-work\vm-iasi-work.vhdx
+14:20:09 - Installer:       calamares
+14:20:09 - Source ISO:      C:\discos\kubuntu-24.04.4-desktop-amd64.iso
+14:20:09 - Install ISO:     C:\discos\vm-iasi-work.iso
+14:20:09 - Seed ISO:        none
+14:20:09 - Network config:  C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-net.toml
+14:20:09 - Node:            iasi-work
+14:20:09 - Switch:          iasi-net
+14:20:09 - Address:         10.77.0.50/24
+14:20:09 - Gateway:         10.77.0.1
+14:20:09 - DNS:             1.1.1.1, 8.8.8.8
+14:20:09 - Interface:       eth0
+14:20:09 - Log:             C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141915.log

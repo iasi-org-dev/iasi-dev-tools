@@ -1,0 +1,45 @@
+﻿14:14:36 - Command [C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work]: wsl.exe sh -lc "command -v xorriso >/dev/null 2>&1"
+14:14:39 - Preparing Calamares live environment...
+14:14:39 - Creating Calamares live ISO with IASI network configuration...
+14:14:39 - Command [c:\tmp\vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa]: wsl.exe xorriso -osirrox on -indev /mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso -extract /boot/grub/grub.cfg /mnt/c/tmp/vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa/grub.cfg
+wsl.exe : xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (xorriso 1.5.6 :...burnia project.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Copying of file objects from ISO image to disk filesystem is: Enabled
+xorriso : NOTE : Loading ISO image tree from LBA 0
+xorriso : UPDATE :     908 nodes read in 1 seconds
+libisofs: NOTE : Found hidden El-Torito image for EFI.
+libisofs: NOTE : EFI image start and size: 2339356 * 2048 , 10160 * 512
+xorriso : NOTE : Detected El-Torito boot information which currently is set to be discarded
+Drive current: -indev '/mnt/c/discos/kubuntu-24.04.4-desktop-amd64.iso'
+Media current: stdio file, overwriteable
+Media status : is written , is appendable
+Boot record  : El Torito , MBR protective-msdos-label grub2-mbr cyl-align-off GPT
+Media summary: 1 session, 2342062 data blocks, 4574m data, 98.0g free
+Volume id    : 'Kubuntu 24.04.4 LTS amd64'
+xorriso : UPDATE :       1 files restored (   741b) in 1 seconds = 0.0xD
+Extracted from ISO image: file '/boot/grub/grub.cfg'='/mnt/c/tmp/vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa/grub.cfg'
+14:14:39 - Command [c:\tmp\vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa]: wsl.exe chmod u+w -- /mnt/c/tmp/vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa/grub.cfg
+14:14:39 - Calamares GRUB linux lines before network injection:
+14:14:39 - Command [c:\tmp\vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa]: wsl.exe grep -nE ^[[:space:]]*linux(efi)?[[:space:]]+/casper/vmlinuz(\.efi)?([[:space:]]|$) /mnt/c/tmp/vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa/grub.cfg
+wsl.exe : /bin/bash: -c: line 1: syntax error near unexpected token `('
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\log.ps1: 56 Carácter: 19
++         $Output = & $Command @Arguments 2>&1
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/bin/bash: -c: ...ected token `(':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+/bin/bash: -c: line 1: `grep -nE ^[[:space:]]*linux(efi)?[[:space:]]+/casper/vmlinuz(\.efi)?([[:space:]]|$) /mnt/c/tmp/vm-iasi-work-calamares-ad03396c81294bcdbee2cd4fe49f0bfa/grub.cfg'
+No /casper/vmlinuz boot line was found in Calamares grub.cfg. See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141436.log
+En C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\bin\ps\common\iso.ps1: 186 Carácter: 13
++             throw "No /casper/vmlinuz boot line was found in Calamare ...
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (No /casper/vmli...60921141436.log:String) [], RuntimeException
+    + FullyQualifiedErrorId : No /casper/vmlinuz boot line was found in Calamares grub.cfg. See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141436.log
+14:14:39 - No /casper/vmlinuz boot line was found in Calamares grub.cfg. See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141436.log
+14:14:39 - See log: C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921141436.log

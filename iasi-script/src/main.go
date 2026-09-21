@@ -14,25 +14,41 @@ func main() {
 }
 
 func run(args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("usage: iasi-script")
-	}
-
-	dir, err := workDir()
+	Parms, err := processArguments(args)
 	if err != nil {
 		return err
 	}
 
-	descriptor, err := loadDescriptor(dir)
+	if Parms.Help {
+		printHelp()
+		return nil
+	}
+
+	environment, err := prepareEnvironment()
 	if err != nil {
 		return err
 	}
 
-	configPath := resolveConfigPath(dir, descriptor)
-	config, err := loadConfig(configPath)
+	execution, err := prepareExecution(Parms, environment)
 	if err != nil {
 		return err
 	}
 
-	return build(dir, descriptor, config)
+	descriptor, err := loadDescriptor(execution.WorkingDir)
+	if err != nil {
+		return err
+	}
+
+	for _, configPath := range execution.ConfigPaths {
+		config, err := loadConfig(configPath)
+		if err != nil {
+			return err
+		}
+
+		if err := build(execution.WorkingDir, descriptor, config); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

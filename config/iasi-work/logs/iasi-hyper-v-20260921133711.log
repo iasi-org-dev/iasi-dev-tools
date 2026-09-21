@@ -1,0 +1,23 @@
+﻿13:37:12 - Using Calamares source ISO directly. Unattended Calamares is not enabled yet.
+13:37:12 - Creating virtual machine 'vm-iasi-work'...
+13:37:16 - Starting virtual machine 'vm-iasi-work'...
+13:37:20 - Virtual machine 'vm-iasi-work' started.
+13:37:20 - Virtual machine: vm-iasi-work
+13:37:20 - Mode:            fixed
+13:37:20 - CPU:             4
+13:37:20 - Memory:          8 GB static
+13:37:20 - GPU:             disabled
+13:37:20 - Path:            C:\Maquinas\vm-iasi-work
+13:37:20 - VHDX:            C:\Maquinas\vm-iasi-work\vm-iasi-work.vhdx
+13:37:20 - Installer:       calamares
+13:37:20 - Source ISO:      C:\discos\kubuntu-24.04.4-desktop-amd64.iso
+13:37:20 - Install ISO:     C:\discos\kubuntu-24.04.4-desktop-amd64.iso
+13:37:20 - Seed ISO:        none
+13:37:20 - Network config:  C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-net.toml
+13:37:20 - Node:            iasi-work
+13:37:20 - Switch:          iasi-net
+13:37:20 - Address:         10.77.0.50/24
+13:37:20 - Gateway:         10.77.0.1
+13:37:20 - DNS:             1.1.1.1, 8.8.8.8
+13:37:20 - Interface:       eth0
+13:37:20 - Log:             C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921133711.log

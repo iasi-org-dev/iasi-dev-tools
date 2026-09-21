@@ -1,0 +1,24 @@
+﻿16:58:16 - Preparing Calamares live environment...
+16:58:16 - Creating virtual machine 'vm-iasi-work'...
+16:58:18 - Starting virtual machine 'vm-iasi-work'...
+16:58:19 - Virtual machine 'vm-iasi-work' started.
+16:58:19 - Virtual machine: vm-iasi-work
+16:58:19 - Mode:            fixed
+16:58:19 - CPU:             4
+16:58:19 - Memory:          8 GB static
+16:58:19 - GPU:             disabled
+16:58:19 - Path:            C:\Maquinas\vm-iasi-work
+16:58:19 - VHDX:            C:\Maquinas\vm-iasi-work\vm-iasi-work.vhdx
+16:58:19 - Installer:       calamares
+16:58:19 - Source ISO:      C:\discos\kubuntu-24.04.4-desktop-amd64.iso
+16:58:19 - Install ISO:     C:\discos\kubuntu-24.04.4-desktop-amd64.iso
+16:58:19 - Seed ISO:        none
+16:58:19 - Network config:  C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-net.toml
+16:58:19 - Node:            iasi-work
+16:58:19 - IASI switch:     iasi-net
+16:58:19 - IASI interface:  eth0
+16:58:19 - IASI address:    10.77.0.50/24
+16:58:19 - Internet switch: Default Switch
+16:58:19 - Internet iface:  eth1
+16:58:19 - Internet:        DHCP
+16:58:19 - Log:             C:\Users\Javier\Documents\DES\PRJ\iasi-org\iasi-dev-tools\config\iasi-work\logs\iasi-hyper-v-20260921165816.log
