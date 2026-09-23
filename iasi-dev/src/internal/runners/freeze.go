@@ -1,10 +1,8 @@
 package runners
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"iasi-dev/internal/args"
@@ -14,17 +12,9 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-const freezeManifestName = ".iasi-freeze.json"
-
-type freezeManifest struct {
-	Organization string            `json:"organization"`
-	Version      string            `json:"version"`
-	Repositories map[string]string `json:"repositories"`
-}
-
-// Freeze closes the current development-organization version into an immutable
-// sibling workspace. The current VERSION is used as-is; choosing the next
-// development version is a separate, explicit `version vX.Y.Z` operation.
+// Freeze closes the current development-organization version by tagging the
+// current HEAD of every repository. A freeze is always published to origin;
+// it never creates a copied or materialized workspace.
 func Freeze(Parms *structures.Parms) []string {
 	if _, ok := parseSemanticVersion(Parms.Version); !ok {
 		cli.Error(RC.Error, *Parms, "La versión actual no es válida: %s", Parms.Version)
@@ -40,91 +30,39 @@ func Freeze(Parms *structures.Parms) []string {
 		cli.Error(RC.Error, *Parms, "No se encontraron repositorios para congelar.")
 	}
 
-	destination := freezeDestination(root, Parms.Organization, Parms.Version)
-	if _, err := os.Stat(destination); err == nil {
-		cli.Error(RC.Error, *Parms, "La versión %s ya está congelada en %s.", Parms.Version, destination)
-	} else if !os.IsNotExist(err) {
-		cli.Error(RC.Error, *Parms, "No se puede comprobar el destino de freeze %s: %v", destination, err)
-	}
+	validateFreezeVersion(Parms, repositories, Parms.Version)
 
 	cli.Header(*Parms, "Freeze %s", Parms.Organization)
 	cli.Info(*Parms, "Version: %s", Parms.Version)
-	cli.Info(*Parms, "Source: %s", root)
-	cli.Info(*Parms, "Destination: %s", destination)
+	cli.Info(*Parms, "Workspace: %s", root)
+	cli.Info(*Parms, "Mode: tags")
 
 	if Parms.DryRun {
 		for _, repository := range repositories {
-			name := filepath.Base(repository)
 			cli.Preview("Command [%s]: git tag -a %s -m \"IASI organization version %s\"\n", repository, Parms.Version, Parms.Version)
-			if !Parms.Local {
-				cli.Preview("Command [%s]: git push origin %s\n", repository, Parms.Version)
-			}
-			cli.Preview("Command [%s]: git clone --no-hardlinks %s %s\n", filepath.Dir(freezeTemporary(destination)), repository, filepath.Join(freezeTemporary(destination), name))
+			cli.Preview("Command [%s]: git push origin %s\n", repository, Parms.Version)
 		}
-		cli.Preview("Freeze snapshot: %s\n", destination)
 		return append([]string{}, repositories...)
 	}
 
 	validateFreezeWorkingTrees(Parms, repositories)
+
 	createdTags := []string{}
 	pushedTags := []string{}
-	tagsCommitted := false
+	committed := false
 	defer func() {
-		if tagsCommitted {
+		if committed {
 			return
 		}
 		rollbackFreezeRemoteTags(Parms, Parms.Version, pushedTags)
 		rollbackFreezeLocalTags(Parms, Parms.Version, createdTags)
 	}()
+
 	ensureFreezeTags(Parms, repositories, Parms.Version, &createdTags, &pushedTags)
-
-	temporary := freezeTemporary(destination)
-	if err := os.RemoveAll(temporary); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo limpiar el workspace temporal %s: %v", temporary, err)
-	}
-	if err := os.MkdirAll(temporary, 0755); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo crear el workspace temporal %s: %v", temporary, err)
-	}
-
-	completed := false
-	defer func() {
-		if !completed {
-			_ = os.RemoveAll(temporary)
-		}
-	}()
-
-	manifest := freezeManifest{
-		Organization: Parms.Organization,
-		Version:      Parms.Version,
-		Repositories: map[string]string{},
-	}
-	frozenRepositories := make([]string, 0, len(repositories))
-
-	for _, repository := range repositories {
-		name := filepath.Base(repository)
-		destinationRepository := filepath.Join(temporary, name)
-		cli.Step(*Parms, "Freezing %s", name)
-
-		commit := repositoryHead(Parms, repository)
-		manifest.Repositories[name] = commit
-
-		if !freezeCloneRepository(Parms, repository, destinationRepository, Parms.Version) {
-			cli.Error(RC.Error, *Parms, "No se pudo congelar %s. Revisa el log: %s", name, logName(*Parms))
-		}
-		frozenRepositories = append(frozenRepositories, filepath.Join(destination, name))
-	}
-
-	if err := writeFreezeManifest(temporary, manifest); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo escribir el manifest de freeze: %v", err)
-	}
-	if err := os.Rename(temporary, destination); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo cerrar la versión congelada en %s: %v", destination, err)
-	}
-	completed = true
-	tagsCommitted = true
+	committed = true
 
 	cli.Success(*Parms, "Organization frozen at %s.", Parms.Version)
-	return frozenRepositories
+	return append([]string{}, repositories...)
 }
 
 func completeOrganizationRepositories(Parms *structures.Parms, root string) []string {
@@ -155,16 +93,74 @@ func organizationWorkspaceRoot(Parms *structures.Parms) string {
 	return workflowOrganizationRoot(Parms.Repos)
 }
 
-func freezeDestination(root string, organization string, version string) string {
-	stable := strings.TrimSuffix(organization, "-dev")
-	if stable == "" || stable == organization {
-		stable = organization
+func validateFreezeVersion(Parms *structures.Parms, repositories []string, version string) {
+	candidate, ok := parseSemanticVersion(version)
+	if !ok {
+		cli.Error(RC.Error, *Parms, "La versión actual no es válida: %s", version)
 	}
-	return filepath.Join(filepath.Dir(filepath.Clean(root)), stable+"-"+version)
+
+	var highest semanticVersion
+	highestTag := ""
+	highestRepository := ""
+
+	for _, repository := range repositories {
+		for _, tag := range freezeRepositoryTags(Parms, repository) {
+			parsed, ok := parseSemanticVersion(tag)
+			if !ok {
+				continue
+			}
+			if highestTag == "" || compareSemanticVersions(parsed, highest) > 0 {
+				highest = parsed
+				highestTag = tag
+				highestRepository = repository
+			}
+		}
+	}
+
+	if highestTag != "" && compareSemanticVersions(candidate, highest) <= 0 {
+		cli.Error(
+			RC.Error,
+			*Parms,
+			"La versión %s debe ser superior a todos los tags existentes; el mayor es %s en %s.",
+			version,
+			highestTag,
+			filepath.Base(highestRepository),
+		)
+	}
 }
 
-func freezeTemporary(destination string) string {
-	return filepath.Join(filepath.Dir(destination), "."+filepath.Base(destination)+".freeze.tmp")
+func freezeRepositoryTags(Parms *structures.Parms, repository string) []string {
+	tags := map[string]bool{}
+
+	local := commands.Run(repository, Parms.LogFile, "git", "tag", "--list")
+	if local.RC != RC.OK {
+		cli.Error(RC.Error, *Parms, "No se pudieron leer los tags locales de %s", repository)
+	}
+	for _, tag := range strings.Fields(local.Stdout) {
+		tags[tag] = true
+	}
+
+	remote := commands.Run(repository, Parms.LogFile, "git", "ls-remote", "--tags", "origin")
+	if remote.RC != RC.OK {
+		cli.Error(RC.Error, *Parms, "No se pudieron leer los tags publicados de %s", repository)
+	}
+	for _, line := range strings.Split(remote.Stdout, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		ref := strings.TrimPrefix(fields[1], "refs/tags/")
+		ref = strings.TrimSuffix(ref, "^{}")
+		if ref != "" {
+			tags[ref] = true
+		}
+	}
+
+	result := make([]string, 0, len(tags))
+	for tag := range tags {
+		result = append(result, tag)
+	}
+	return result
 }
 
 func validateFreezeWorkingTrees(Parms *structures.Parms, repositories []string) {
@@ -179,40 +175,16 @@ func validateFreezeWorkingTrees(Parms *structures.Parms, repositories []string) 
 	}
 }
 
-func repositoryHead(Parms *structures.Parms, repository string) string {
-	result := commands.Run(repository, Parms.LogFile, "git", "rev-parse", "HEAD")
-	if result.RC != RC.OK {
-		cli.Error(RC.Error, *Parms, "No se pudo obtener HEAD de %s", repository)
-	}
-	return strings.TrimSpace(result.Stdout)
-}
-
 func ensureFreezeTags(Parms *structures.Parms, repositories []string, version string, created *[]string, pushed *[]string) {
 	for _, repository := range repositories {
-		head := repositoryHead(Parms, repository)
-		result := commands.Run(repository, Parms.LogFile, "git", "rev-list", "-n", "1", version)
-		if result.RC == RC.OK {
-			if strings.TrimSpace(result.Stdout) != head {
-				cli.Error(RC.Error, *Parms, "El tag %s de %s no apunta a HEAD.", version, repository)
-			}
-		} else {
-			message := "IASI organization version " + version
-			if !promoteCommand(Parms, repository, "tag", "-a", version, "-m", message) {
-				cli.Error(RC.Error, *Parms, "No se pudo crear el tag %s en %s", version, repository)
-			}
-			*created = append(*created, repository)
+		message := "IASI organization version " + version
+		if !promoteCommand(Parms, repository, "tag", "-a", version, "-m", message) {
+			cli.Error(RC.Error, *Parms, "No se pudo crear el tag %s en %s", version, repository)
 		}
+		*created = append(*created, repository)
 
-		if Parms.Local {
-			continue
-		}
-
-		remoteCommit, exists := freezeRemoteTagCommit(Parms, repository, version)
-		if exists {
-			if remoteCommit != head {
-				cli.Error(RC.Error, *Parms, "El tag remoto %s de %s no apunta a HEAD.", version, repository)
-			}
-			continue
+		if _, exists := freezeRemoteTagCommit(Parms, repository, version); exists {
+			cli.Error(RC.Error, *Parms, "El tag %s ya existe en origin para %s.", version, repository)
 		}
 
 		if !promoteCommand(Parms, repository, "push", "origin", version) {
@@ -258,108 +230,4 @@ func rollbackFreezeRemoteTags(Parms *structures.Parms, version string, repositor
 			cli.ErrorMessage(*Parms, "No se pudo revertir el tag remoto %s en %s", version, repositories[i])
 		}
 	}
-}
-
-func freezeCloneRepository(Parms *structures.Parms, source string, destination string, version string) bool {
-	result := commands.RunLogged(filepath.Dir(destination), Parms.LogFile, "git", "clone", "--no-hardlinks", source, destination)
-	if result.RC != RC.OK {
-		return false
-	}
-
-	origin := commands.Run(source, Parms.LogFile, "git", "remote", "get-url", "origin")
-	if origin.RC != RC.OK {
-		return false
-	}
-	if commands.RunLogged(destination, Parms.LogFile, "git", "remote", "set-url", "origin", strings.TrimSpace(origin.Stdout)).RC != RC.OK {
-		return false
-	}
-	if commands.RunLogged(destination, Parms.LogFile, "git", "checkout", "--detach", version).RC != RC.OK {
-		return false
-	}
-	return true
-}
-
-func writeFreezeManifest(root string, manifest freezeManifest) error {
-	names := make([]string, 0, len(manifest.Repositories))
-	for name := range manifest.Repositories {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	ordered := make(map[string]string, len(names))
-	for _, name := range names {
-		ordered[name] = manifest.Repositories[name]
-	}
-	manifest.Repositories = ordered
-
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
-	data = append(data, '\n')
-	return os.WriteFile(filepath.Join(root, freezeManifestName), data, 0644)
-}
-
-func readFreezeManifest(root string) (freezeManifest, error) {
-	data, err := os.ReadFile(filepath.Join(root, freezeManifestName))
-	if err != nil {
-		return freezeManifest{}, err
-	}
-	manifest := freezeManifest{}
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return freezeManifest{}, err
-	}
-	return manifest, nil
-}
-
-func validateFrozenOrganization(Parms *structures.Parms, root string, version string) []string {
-	manifest, err := readFreezeManifest(root)
-	if err != nil {
-		cli.Error(RC.Error, *Parms, "No se puede leer el freeze %s: %v", root, err)
-	}
-	if manifest.Version != version {
-		cli.Error(RC.Error, *Parms, "El freeze %s declara %s y se solicitó %s.", root, manifest.Version, version)
-	}
-	if manifest.Organization != Parms.Organization {
-		cli.Error(RC.Error, *Parms, "El freeze %s pertenece a %s y no a %s.", root, manifest.Organization, Parms.Organization)
-	}
-
-	discovery := *Parms
-	discovery.Targets = []string{root}
-	discovery.RequestedTargets = nil
-	discovery.TargetDetails = nil
-	discovery.Repos = nil
-	discovery.BlackList = nil
-	args.Prepare(&discovery)
-
-	if len(discovery.Repos) != len(manifest.Repositories) {
-		cli.Error(RC.Error, *Parms, "El freeze %s no contiene el conjunto completo de repositorios.", root)
-	}
-
-	for _, repository := range discovery.Repos {
-		name := filepath.Base(repository)
-		expected, ok := manifest.Repositories[name]
-		if !ok {
-			cli.Error(RC.Error, *Parms, "El repositorio %s no figura en el manifest de freeze.", name)
-		}
-		if Parms.DryRun {
-			continue
-		}
-		if head := repositoryHead(Parms, repository); head != expected {
-			cli.Error(RC.Error, *Parms, "El repositorio congelado %s ha cambiado: %s != %s.", name, head, expected)
-		}
-		result := commands.Run(repository, Parms.LogFile, "git", "status", "--porcelain")
-		if result.RC != RC.OK || strings.TrimSpace(result.Stdout) != "" {
-			cli.Error(RC.Error, *Parms, "El repositorio congelado %s no está limpio.", name)
-		}
-	}
-
-	return append([]string{}, discovery.Repos...)
-}
-
-func frozenOrganizationPath(Parms *structures.Parms, version string) string {
-	root := organizationWorkspaceRoot(Parms)
-	if root == "" {
-		cli.Error(RC.Error, *Parms, "No se puede deducir el workspace de la organización.")
-	}
-	return freezeDestination(root, Parms.Organization, version)
 }

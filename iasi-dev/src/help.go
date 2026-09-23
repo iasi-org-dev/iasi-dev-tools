@@ -10,7 +10,7 @@ func printHelp() {
 	  iasi-dev workflow <build|publish|release> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
 	  iasi-dev workflow promote vMAJOR.MINOR.PATCH [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev workflow promote -p [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	  iasi-dev freeze [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
+	  iasi-dev freeze [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev promote vMAJOR.MINOR.PATCH [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev promote -p [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev restore [vMAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
@@ -23,8 +23,8 @@ func printHelp() {
 	  publish      Publish through iasi.quarto
 	  release      Release through iasi.quarto
 	  commit       Commit selected repositories
-	  freeze       Freeze the complete development organization at its current VERSION
-	  promote      Promote a previously frozen organization version; with -p, push only
+	  freeze       Freeze the complete development organization at its current VERSION using published Git tags
+	  promote      Promote a previously frozen tagged organization version; with -p, push only
 	  restore      Restore repositories to a tagged version; without a version, restore main
 	  materialize  Materialize an organization into a destination workspace without Git history
 	  workflow     Run a development workflow
@@ -35,7 +35,7 @@ func printHelp() {
 	  build        Build and commit
 	  publish      Publish and commit; optionally include previous stages with -a
 	  release      Release and commit; optionally include previous stages with -a
-	  promote      Promote a frozen organization version to stable and push it unless -l; with -p, push only
+	  promote      Promote a frozen tagged organization version to stable and push it unless -l; with -p, push only
 	
 	Options:
 	  -h         Show help.
@@ -47,7 +47,7 @@ func printHelp() {
 	  -d         Show debug messages.
 	  -f         Force the operation when supported.
 	  -i         Install the artifact when applicable.
-	  -l         Keep the operation local; do not publish to GitHub when supported.
+	  -l         Keep the operation local when supported. Freeze does not support -l and always publishes its tags.
 	  -m         Show the fully prepared execution and stop before running the command.
 	  -M         Dry-run: show the prepared execution and external commands without executing them.
 	  -p         Push only; with promote, do not promote or materialize.

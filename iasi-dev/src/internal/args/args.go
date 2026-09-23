@@ -31,6 +31,7 @@ func Parse(command string, values []string) structures.Parms {
 	Parms.Subcommand = subcommand
 	validateCheckModes(&Parms)
 	validatePushMode(command, &Parms)
+	validateLocalMode(command, &Parms)
 	extractTargetVersion(command, &Parms)
 	extractVersionOperands(command, &Parms)
 	validateOrganizationWideCommand(command, &Parms)
@@ -61,6 +62,12 @@ func validatePushMode(command string, Parms *structures.Parms) {
 	}
 	if len(Parms.Targets) != 0 {
 		cli.Error(RC.Error, *Parms, "-p no acepta versión ni targets: solo publica el estado local existente.")
+	}
+}
+
+func validateLocalMode(command string, Parms *structures.Parms) {
+	if command == "freeze" && Parms.Local {
+		cli.Error(RC.Error, *Parms, "-l no está soportado por freeze: freeze siempre publica los tags.")
 	}
 }
 

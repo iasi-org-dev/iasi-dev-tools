@@ -2,6 +2,7 @@ package runners
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,8 +19,9 @@ type semanticVersion struct {
 	patch int
 }
 
-// Promote promotes one previously frozen organization version to the stable
-// organization. It never reads release content from the live development tree.
+// Promote materializes one previously frozen organization version into the
+// stable organization. Frozen versions are read from Git tags, never from a
+// persistent copied freeze workspace.
 func Promote(Parms *structures.Parms) []string {
 	if Parms.Push {
 		workflowPromotePush(Parms)
@@ -31,27 +33,52 @@ func Promote(Parms *structures.Parms) []string {
 		cli.Error(RC.Error, *Parms, "La versión a promover no es válida: %s", Parms.TargetVersion)
 	}
 
-	frozenRoot := frozenOrganizationPath(Parms, Parms.TargetVersion)
-	frozenRepositories := validateFrozenOrganization(Parms, frozenRoot, Parms.TargetVersion)
-
-	fmt.Printf("Organization: %s\n", Parms.Organization)
-	fmt.Printf("Frozen version: %s\n", Parms.TargetVersion)
-	fmt.Printf("Frozen workspace: %s\n", frozenRoot)
+	root := organizationWorkspaceRoot(Parms)
+	if root == "" {
+		cli.Error(RC.Error, *Parms, "No se puede deducir el workspace completo de la organización.")
+	}
+	sourceRepositories := completeOrganizationRepositories(Parms, root)
+	if len(sourceRepositories) == 0 {
+		cli.Error(RC.Error, *Parms, "No se encontraron repositorios para promover.")
+	}
 
 	promotion := *Parms
-	promotion.Repos = frozenRepositories
+	promotion.Repos = sourceRepositories
 	promotion.Targets = nil
 	promotion.TargetDetails = nil
 	promotion.BlackList = nil
 	promotion.MaterializeDestination = workflowPromoteDestination(&promotion)
 
+	temporary := promoteTemporary(promotion.MaterializeDestination, Parms.TargetVersion)
+
+	fmt.Printf("Organization: %s\n", Parms.Organization)
+	fmt.Printf("Frozen version: %s\n", Parms.TargetVersion)
+	fmt.Printf("Source: Git tags\n")
+	fmt.Printf("Temporary workspace: %s\n", temporary)
+
 	if Parms.DryRun {
-		cli.Preview("Promote frozen workspace: %s -> %s\n", frozenRoot, promotion.MaterializeDestination)
+		for _, repository := range sourceRepositories {
+			name := filepath.Base(repository)
+			cli.Preview("Promote source [%s]: origin tag %s -> %s\n", name, Parms.TargetVersion, filepath.Join(temporary, name))
+		}
+		cli.Preview("Promote tagged version: %s -> %s\n", Parms.TargetVersion, promotion.MaterializeDestination)
 		if !Parms.Local {
 			cli.Preview("Publish stable organization: %s\n", promotion.MaterializeDestination)
 		}
-		return append([]string{}, frozenRepositories...)
+		return append([]string{}, sourceRepositories...)
 	}
+
+	validatePromotionTags(Parms, sourceRepositories, Parms.TargetVersion)
+
+	if err := os.RemoveAll(temporary); err != nil {
+		cli.Error(RC.Error, *Parms, "No se pudo limpiar el workspace temporal %s: %v", temporary, err)
+	}
+	if err := os.MkdirAll(temporary, 0755); err != nil {
+		cli.Error(RC.Error, *Parms, "No se pudo crear el workspace temporal %s: %v", temporary, err)
+	}
+	defer os.RemoveAll(temporary)
+
+	promotion.Repos = clonePromotionVersion(Parms, sourceRepositories, temporary, Parms.TargetVersion)
 
 	cli.Step(*Parms, "Materializing stable organization")
 	repositories := materializeLocal(&promotion)
@@ -61,15 +88,54 @@ func Promote(Parms *structures.Parms) []string {
 	}
 	if Parms.Local {
 		Parms.Repos = repositories
-		cli.Success(*Parms, "Organization promoted locally from frozen version %s.", Parms.TargetVersion)
+		cli.Success(*Parms, "Organization promoted locally from tag %s.", Parms.TargetVersion)
 		return repositories
 	}
 
 	promotion.Repos = repositories
 	repositories = push(&promotion)
 	Parms.Repos = repositories
-	cli.Success(*Parms, "Organization promoted from frozen version %s.", Parms.TargetVersion)
+	cli.Success(*Parms, "Organization promoted from tag %s.", Parms.TargetVersion)
 	return repositories
+}
+
+func promoteTemporary(destination string, version string) string {
+	parent := filepath.Dir(filepath.Clean(destination))
+	name := filepath.Base(filepath.Clean(destination))
+	return filepath.Join(parent, "."+name+".promote-"+version+".tmp")
+}
+
+func validatePromotionTags(Parms *structures.Parms, repositories []string, version string) {
+	for _, repository := range repositories {
+		if _, exists := freezeRemoteTagCommit(Parms, repository, version); !exists {
+			cli.Error(RC.Error, *Parms, "El tag %s de %s no está publicado en origin.", version, repository)
+		}
+	}
+}
+
+func promotionOrigin(Parms *structures.Parms, repository string) string {
+	result := commands.Run(repository, Parms.LogFile, "git", "remote", "get-url", "origin")
+	if result.RC != RC.OK || strings.TrimSpace(result.Stdout) == "" {
+		cli.Error(RC.Error, *Parms, "No se puede leer origin de %s.", repository)
+	}
+	return strings.TrimSpace(result.Stdout)
+}
+
+func clonePromotionVersion(Parms *structures.Parms, repositories []string, root string, version string) []string {
+	clones := make([]string, 0, len(repositories))
+	for _, repository := range repositories {
+		name := filepath.Base(repository)
+		destination := filepath.Join(root, name)
+		origin := promotionOrigin(Parms, repository)
+		cli.Step(*Parms, "Reading %s at %s", name, version)
+
+		result := commands.RunLogged(root, Parms.LogFile, "git", "clone", "--no-hardlinks", "--branch", version, "--single-branch", origin, destination)
+		if result.RC != RC.OK {
+			cli.Error(RC.Error, *Parms, "No se pudo leer %s desde el tag publicado %s. Revisa el log: %s", name, version, logName(*Parms))
+		}
+		clones = append(clones, destination)
+	}
+	return clones
 }
 
 func formatCommandArguments(args []string) string {
