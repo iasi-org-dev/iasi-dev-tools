@@ -35,7 +35,7 @@ func printHelp() {
 	  build        Build and commit
 	  publish      Publish and commit; optionally include previous stages with -a
 	  release      Release and commit; optionally include previous stages with -a
-	  promote      Freeze current VERSION, advance development to --version, then promote the frozen VERSION and publish unless -l
+	  promote      Freeze current VERSION, advance development to --version, then promote the frozen VERSION; -l creates missing destination repositories without synchronizing contents
 	
 	Options:
 	  -h         Show help.
@@ -47,7 +47,7 @@ func printHelp() {
 	  -d         Show debug messages.
 	  -f         Force the operation when supported.
 	  -i         Install the artifact when applicable.
-	  -l         Keep the operation local when supported. Freeze does not support -l and always publishes its tags.
+	  -l         Keep promoted contents local when supported; promote still creates missing destination repositories and propagates VERSION. Freeze does not support -l.
 	  -m         Show the fully prepared execution and stop before running the command.
 	  -M         Dry-run: show the prepared execution and external commands without executing them.
 	  -t         Continue when an operation fails.

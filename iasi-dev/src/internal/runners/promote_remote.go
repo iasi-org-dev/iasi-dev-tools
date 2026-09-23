@@ -17,30 +17,23 @@ type promoteRemotePlan struct {
 	Delete []string
 }
 
+// promoteRemotePrepare creates only destination repositories that do not yet exist.
+// It is deliberately non-destructive and does not publish local contents. This is
+// the remote preparation performed by promote -l so later workflows can use origin.
+func promoteRemotePrepare(Parms *structures.Parms, repositories []string) {
+	remoteRepositories := promoteRemoteRepositories(Parms)
+	plan := promoteRemotePlanForMode(repositories, remoteRepositories, true)
+	promoteRemoteCreate(Parms, plan.Create)
+}
+
 // promoteRemoteSynchronize makes the destination GitHub organization mirror the
 // already promoted local workspace. Local repositories are the publication source:
 // missing remote repositories are created, every current repository is force-pushed,
 // and repositories no longer present locally are removed only after all pushes succeed.
 func promoteRemoteSynchronize(Parms *structures.Parms, repositories []string) {
 	remoteRepositories := promoteRemoteRepositories(Parms)
-	plan := promoteRemoteReconciliation(repositories, remoteRepositories)
-
-	for _, name := range plan.Create {
-		visibility := promoteRemoteSourceVisibility(Parms, name)
-		cli.Step(*Parms, "Creating remote repository %s/%s", Parms.DestinationOrganization, name)
-		result := commands.RunLogged(
-			".",
-			Parms.LogFile,
-			"gh",
-			"repo",
-			"create",
-			Parms.DestinationOrganization+"/"+name,
-			"--"+visibility,
-		)
-		if result.RC != RC.OK {
-			cli.Error(RC.Error, *Parms, "No se pudo crear el repositorio remoto %s/%s. Revisa el log: %s", Parms.DestinationOrganization, name, logName(*Parms))
-		}
-	}
+	plan := promoteRemotePlanForMode(repositories, remoteRepositories, false)
+	promoteRemoteCreate(Parms, plan.Create)
 
 	for _, repository := range plan.Push {
 		cli.Step(*Parms, "Synchronizing %s", filepath.Base(repository))
@@ -66,14 +59,37 @@ func promoteRemoteSynchronize(Parms *structures.Parms, repositories []string) {
 	}
 }
 
+func promoteRemoteCreate(Parms *structures.Parms, repositories []string) {
+	for _, name := range repositories {
+		visibility := promoteRemoteSourceVisibility(Parms, name)
+		cli.Step(*Parms, "Creating remote repository %s/%s", Parms.DestinationOrganization, name)
+		result := commands.RunLogged(
+			".",
+			Parms.LogFile,
+			"gh",
+			"repo",
+			"create",
+			Parms.DestinationOrganization+"/"+name,
+			"--"+visibility,
+		)
+		if result.RC != RC.OK {
+			cli.Error(RC.Error, *Parms, "No se pudo crear el repositorio remoto %s/%s. Revisa el log: %s", Parms.DestinationOrganization, name, logName(*Parms))
+		}
+	}
+}
+
 func promoteRemotePreview(Parms *structures.Parms, repositories []string) {
-	cli.Info(*Parms, "Synchronizing remote organization...")
+	cli.Info(*Parms, "Preparing remote organization...")
 	for _, repository := range repositories {
 		name := filepath.Base(repository)
 		cli.Preview("Ensure remote repository exists: %s/%s\n", Parms.DestinationOrganization, name)
-		cli.Preview("Force remote main from local snapshot: %s\n", repository)
+		if !Parms.Local {
+			cli.Preview("Force remote main from local snapshot: %s\n", repository)
+		}
 	}
-	cli.Preview("Remove remote repositories not present in local destination: %s\n", Parms.DestinationOrganization)
+	if !Parms.Local {
+		cli.Preview("Remove remote repositories not present in local destination: %s\n", Parms.DestinationOrganization)
+	}
 }
 
 func promoteRemoteRepositories(Parms *structures.Parms) []string {
@@ -99,6 +115,15 @@ func promoteRemoteRepositories(Parms *structures.Parms) []string {
 		}
 	}
 	return repositories
+}
+
+func promoteRemotePlanForMode(repositories []string, remoteRepositories []string, local bool) promoteRemotePlan {
+	plan := promoteRemoteReconciliation(repositories, remoteRepositories)
+	if local {
+		plan.Push = []string{}
+		plan.Delete = []string{}
+	}
+	return plan
 }
 
 func promoteRemoteReconciliation(repositories []string, remoteRepositories []string) promoteRemotePlan {

@@ -13,6 +13,11 @@ import (
 	"iasi-dev/internal/structures"
 )
 
+
+var promotePrepareRemote = promoteRemotePrepare
+var promoteSynchronizeRemote = promoteRemoteSynchronize
+var promoteSetDestinationVersion = setOrganizationVersionFor
+
 type semanticVersion struct {
 	major int
 	minor int
@@ -69,10 +74,8 @@ func Promote(Parms *structures.Parms) []string {
 		cli.Preview("Replace local destination: %s -> %s\n", temporary, destination)
 
 		repositories := promoteDestinationRepositories(destination, sourceRepositories, Parms.SourceOrganization, Parms.DestinationOrganization)
-		if !Parms.Local {
-			promoteRemotePreview(Parms, repositories)
-			cli.Preview("Set %s VERSION to %s\n", Parms.DestinationOrganization, Parms.TargetVersion)
-		}
+		promoteRemotePreview(Parms, repositories)
+		cli.Preview("Set %s VERSION to %s\n", Parms.DestinationOrganization, Parms.TargetVersion)
 		return repositories
 	}
 
@@ -102,13 +105,16 @@ func Promote(Parms *structures.Parms) []string {
 	repositories := promoteDestinationRepositories(destination, sourceRepositories, Parms.SourceOrganization, Parms.DestinationOrganization)
 	Parms.Repos = repositories
 
-	if !Parms.Local {
+	if Parms.Local {
+		cli.Info(*Parms, "Preparing remote organization...")
+		promotePrepareRemote(Parms, repositories)
+	} else {
 		cli.Info(*Parms, "Synchronizing remote organization...")
-		promoteRemoteSynchronize(Parms, repositories)
-
-		cli.Info(*Parms, "Propagating version...")
-		setOrganizationVersionFor(Parms, Parms.DestinationOrganization, Parms.TargetVersion)
+		promoteSynchronizeRemote(Parms, repositories)
 	}
+
+	cli.Info(*Parms, "Propagating version...")
+	promoteSetDestinationVersion(Parms, Parms.DestinationOrganization, Parms.TargetVersion)
 
 	cli.Success(*Parms, "Promoted %s.", Parms.TargetVersion)
 	return repositories

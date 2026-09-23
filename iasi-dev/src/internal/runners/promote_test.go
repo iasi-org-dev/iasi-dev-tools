@@ -10,6 +10,21 @@ import (
 	"iasi-dev/internal/structures"
 )
 
+
+func stubPromoteRemoteSideEffects(t *testing.T) {
+	previousPrepare := promotePrepareRemote
+	previousSynchronize := promoteSynchronizeRemote
+	previousVersion := promoteSetDestinationVersion
+	promotePrepareRemote = func(*structures.Parms, []string) {}
+	promoteSynchronizeRemote = func(*structures.Parms, []string) {}
+	promoteSetDestinationVersion = func(*structures.Parms, string, string) {}
+	t.Cleanup(func() {
+		promotePrepareRemote = previousPrepare
+		promoteSynchronizeRemote = previousSynchronize
+		promoteSetDestinationVersion = previousVersion
+	})
+}
+
 func TestParseSemanticVersion(t *testing.T) {
 	tests := []struct {
 		value string
@@ -131,6 +146,7 @@ func TestFreezePublishesTagsWithoutCreatingWorkspace(t *testing.T) {
 }
 
 func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
+	stubPromoteRemoteSideEffects(t)
 	base := t.TempDir()
 	root := filepath.Join(base, "iasi-org-dev")
 	repository := filepath.Join(root, "repo-a")
@@ -287,6 +303,7 @@ func TestFreezeRequiresVersionGreaterThanEveryExistingTag(t *testing.T) {
 }
 
 func TestPromoteDiscardsExistingTemporaryWorkspace(t *testing.T) {
+	stubPromoteRemoteSideEffects(t)
 	base := t.TempDir()
 	root := filepath.Join(base, "iasi-org-dev")
 	repository := filepath.Join(root, "repo-a")

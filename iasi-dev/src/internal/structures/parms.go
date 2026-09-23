@@ -12,7 +12,7 @@ type Parms struct {
 	Force                  bool     // Fuerza la operación cuando está soportado.
 	Help                   bool     // Muestra la ayuda.
 	Install                bool     // Instala el artefacto cuando proceda.
-	Local                  bool     // Mantiene local la publicación cuando la operación lo soporta.
+	Local                  bool     // Mantiene local el contenido promovido; algunas operaciones pueden preparar metadatos/remotos.
 	Tolerant               bool     // Continúa cuando una operación falla.
 	Message                string   // Mensaje utilizado para el commit.
 	Format                 string   // Formato o formatos de salida.
