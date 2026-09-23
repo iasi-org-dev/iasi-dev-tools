@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"iasi-dev/internal/args"
@@ -24,8 +25,7 @@ func prepareParms(command string, Parms *structures.Parms) {
 		preparePromotePaths(Parms)
 		Parms.Targets = []string{Parms.SourcePath}
 		args.Prepare(Parms)
-		prepareOrganization(Parms)
-		Parms.SourceOrganization = Parms.Organization
+		preparePromoteOrganizations(Parms)
 		commands.SetDryRun(Parms.DryRun)
 		return
 	}
@@ -34,8 +34,7 @@ func prepareParms(command string, Parms *structures.Parms) {
 		preparePromotePaths(Parms)
 		Parms.Targets = []string{Parms.SourcePath}
 		args.Prepare(Parms)
-		prepareOrganization(Parms)
-		Parms.SourceOrganization = Parms.Organization
+		preparePromoteOrganizations(Parms)
 		loadOrganizationVersion(Parms)
 		commands.SetDryRun(Parms.DryRun)
 		return
@@ -49,6 +48,22 @@ func prepareParms(command string, Parms *structures.Parms) {
 
 	// Check modes become effective only after the real preparation has completed.
 	commands.SetDryRun(Parms.DryRun)
+}
+
+// preparePromoteOrganizations derives promotion organization names from the explicit workspace paths.
+func preparePromoteOrganizations(Parms *structures.Parms) {
+	source := filepath.Base(filepath.Clean(Parms.SourcePath))
+	destination := filepath.Base(filepath.Clean(Parms.DestinationPath))
+	if source == "" || source == "." {
+		cli.Error(RC.Error, *Parms, "No se puede deducir la organización origen desde %s.", Parms.SourcePath)
+	}
+	if destination == "" || destination == "." {
+		cli.Error(RC.Error, *Parms, "No se puede deducir la organización destino desde %s.", Parms.DestinationPath)
+	}
+
+	Parms.Organization = source
+	Parms.SourceOrganization = source
+	Parms.DestinationOrganization = destination
 }
 
 func isVersionWrite(command string, Parms *structures.Parms) bool {

@@ -3,6 +3,7 @@ package runners
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"iasi-dev/internal/cli"
 	"iasi-dev/internal/commands"
@@ -115,11 +116,24 @@ func commitChanges(repository string, Parms structures.Parms) int {
 
 func pushChanges(repository string, Parms structures.Parms) int {
 	if Parms.Debug {
-		fmt.Printf("pushChanges: repository=%s\n", repository)
+		fmt.Printf("pushChanges: repository=%s organization=%s\n", repository, Parms.Organization)
 	}
-	result := commands.RunLogged(repository, Parms.LogFile, "git", "push")
+
+	args := pushChangesArguments(Parms.Organization)
+	result := commands.RunLogged(repository, Parms.LogFile, "git", args...)
 	if result.RC != RC.OK {
 		return RC.Fatal
 	}
 	return RC.OK
+}
+
+// pushChangesArguments preserves development history in *-dev organizations.
+// Stable organizations are materialized from development and therefore replace
+// the remote main branch with the promoted snapshot.
+func pushChangesArguments(organization string) []string {
+	organization = strings.TrimSpace(strings.ToLower(organization))
+	if organization == "" || strings.HasSuffix(organization, "-dev") {
+		return []string{"push"}
+	}
+	return []string{"push", "--force", "origin", "HEAD:main"}
 }

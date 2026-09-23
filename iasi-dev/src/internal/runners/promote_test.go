@@ -160,6 +160,7 @@ func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
 		RC:           &rc,
 	}
 	Freeze(&freezeParms)
+	gitTest(t, repository, "remote", "remove", "origin")
 
 	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("development\n"), 0644); err != nil {
 		t.Fatal(err)
