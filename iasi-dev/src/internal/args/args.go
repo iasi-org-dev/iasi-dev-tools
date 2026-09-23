@@ -27,11 +27,12 @@ func Parse(command string, values []string) structures.Parms {
 		values = values[1:]
 	}
 
-	Parms := parseArguments(values)
+	Parms := parseArguments(command, subcommand, values)
 	Parms.Subcommand = subcommand
 	validateCheckModes(&Parms)
-	validatePushMode(command, &Parms)
 	validateLocalMode(command, &Parms)
+	extractPromoteOperands(command, &Parms)
+	extractWorkflowPromoteParameters(command, &Parms)
 	extractTargetVersion(command, &Parms)
 	extractVersionOperands(command, &Parms)
 	validateOrganizationWideCommand(command, &Parms)
@@ -49,31 +50,85 @@ func validateCheckModes(Parms *structures.Parms) {
 	}
 }
 
-func validatePushMode(command string, Parms *structures.Parms) {
-	isPromote := command == "promote" || (command == "workflow" && Parms.Subcommand == "promote")
-	if !Parms.Push {
-		return
-	}
-	if !isPromote {
-		cli.Error(RC.Error, *Parms, "-p solo está soportado por promote y workflow promote.")
-	}
-	if Parms.Local {
-		cli.Error(RC.Error, *Parms, "-p y -l son incompatibles.")
-	}
-	if len(Parms.Targets) != 0 {
-		cli.Error(RC.Error, *Parms, "-p no acepta versión ni targets: solo publica el estado local existente.")
-	}
-}
-
 func validateLocalMode(command string, Parms *structures.Parms) {
 	if command == "freeze" && Parms.Local {
 		cli.Error(RC.Error, *Parms, "-l no está soportado por freeze: freeze siempre publica los tags.")
 	}
 }
 
-// extractTargetVersion separates organization version operands from filesystem targets.
+// extractPromoteOperands requires the complete promotion contract explicitly:
+//   promote <version> <source-path> <destination-path>
+// Relative paths are resolved later against the effective working directory, after --path if present.
+func extractPromoteOperands(command string, Parms *structures.Parms) {
+	isPromote := command == "promote" || command == "promote-check"
+	if !isPromote {
+		return
+	}
+	if len(Parms.Targets) != 3 {
+		cli.Error(RC.Error, *Parms, "promote requiere <version> <source-path> <destination-path>.")
+	}
+
+	version := strings.TrimSpace(Parms.Targets[0])
+	source := strings.TrimSpace(Parms.Targets[1])
+	destination := strings.TrimSpace(Parms.Targets[2])
+	if !looksLikeSemanticVersion(version) {
+		cli.Error(RC.Error, *Parms, "La versión no es válida: %s", version)
+	}
+	if source == "" || destination == "" {
+		cli.Error(RC.Error, *Parms, "source-path y destination-path son obligatorios.")
+	}
+
+	sourcePath := filepath.Clean(source)
+	destinationPath := filepath.Clean(destination)
+	if strings.EqualFold(sourcePath, destinationPath) {
+		cli.Error(RC.Error, *Parms, "source-path y destination-path deben ser rutas distintas.")
+	}
+
+	Parms.TargetVersion = version
+	Parms.SourcePath = sourcePath
+	Parms.DestinationPath = destinationPath
+	Parms.DestinationOrganization = filepath.Base(destinationPath)
+	Parms.Targets = nil
+}
+
+
+// extractWorkflowPromoteParameters requires the orchestration contract explicitly:
+//   workflow promote --source <source-path> --dest <destination-path> --version vMAJOR.MINOR.PATCH
+// --version is the next development version; the version promoted is the source VERSION read during preparation.
+func extractWorkflowPromoteParameters(command string, Parms *structures.Parms) {
+	if command != "workflow" || Parms.Subcommand != "promote" {
+		return
+	}
+	if len(Parms.Targets) != 0 {
+		cli.Error(RC.Error, *Parms, "workflow promote usa parámetros nombrados: --source, --dest y --version.")
+	}
+	if strings.TrimSpace(Parms.SourcePath) == "" {
+		cli.Error(RC.Error, *Parms, "workflow promote requiere --source <source-path>.")
+	}
+	if strings.TrimSpace(Parms.DestinationPath) == "" {
+		cli.Error(RC.Error, *Parms, "workflow promote requiere --dest <destination-path>.")
+	}
+	if strings.TrimSpace(Parms.NextVersion) == "" {
+		cli.Error(RC.Error, *Parms, "workflow promote requiere --version vMAJOR.MINOR.PATCH.")
+	}
+	if !looksLikeSemanticVersion(Parms.NextVersion) {
+		cli.Error(RC.Error, *Parms, "La nueva versión no es válida: %s", Parms.NextVersion)
+	}
+
+	sourcePath := filepath.Clean(Parms.SourcePath)
+	destinationPath := filepath.Clean(Parms.DestinationPath)
+	if strings.EqualFold(sourcePath, destinationPath) {
+		cli.Error(RC.Error, *Parms, "source-path y destination-path deben ser rutas distintas.")
+	}
+
+	Parms.SourcePath = sourcePath
+	Parms.DestinationPath = destinationPath
+	Parms.DestinationOrganization = filepath.Base(destinationPath)
+}
+
+// extractTargetVersion separates restore's optional version operand from filesystem targets.
 func extractTargetVersion(command string, Parms *structures.Parms) {
-	requiresVersion := command == "promote" || command == "restore" || (command == "workflow" && Parms.Subcommand == "promote")
+	requiresVersion := command == "restore"
 	if !requiresVersion || len(Parms.Targets) == 0 {
 		return
 	}
@@ -82,33 +137,23 @@ func extractTargetVersion(command string, Parms *structures.Parms) {
 	Parms.Targets = Parms.Targets[1:]
 }
 
-// extractVersionOperands supports both querying and explicitly setting VERSION:
+// extractVersionOperands supports querying VERSION or explicitly setting it:
 //   version
-//   version iasi-org
 //   version v0.6.0
-//   version v0.6.0 iasi-org-dev
 func extractVersionOperands(command string, Parms *structures.Parms) {
 	if command != "version" || len(Parms.Targets) == 0 {
 		return
 	}
-	if len(Parms.Targets) > 2 {
-		cli.Error(RC.Error, *Parms, "version acepta [vMAJOR.MINOR.PATCH] [organization].")
-	}
-
-	first := Parms.Targets[0]
-	if looksLikeSemanticVersion(first) {
-		Parms.TargetVersion = first
-		if len(Parms.Targets) == 2 {
-			Parms.Organization = Parms.Targets[1]
-		}
-		Parms.Targets = nil
-		return
-	}
-
 	if len(Parms.Targets) > 1 {
-		cli.Error(RC.Error, *Parms, "Si se especifican dos operandos, el primero debe ser una versión vMAJOR.MINOR.PATCH.")
+		cli.Error(RC.Error, *Parms, "version acepta como máximo una versión vMAJOR.MINOR.PATCH.")
 	}
-	Parms.Organization = first
+
+	version := Parms.Targets[0]
+	if !looksLikeSemanticVersion(version) {
+		cli.Error(RC.Error, *Parms, "La versión no es válida: %s", version)
+	}
+
+	Parms.TargetVersion = version
 	Parms.Targets = nil
 }
 
@@ -134,8 +179,8 @@ func looksLikeSemanticVersion(value string) bool {
 }
 
 func validateOrganizationWideCommand(command string, Parms *structures.Parms) {
-	organizationWide := command == "freeze" || command == "promote" || (command == "workflow" && Parms.Subcommand == "promote")
-	if !organizationWide || Parms.Push {
+	organizationWide := command == "freeze" || command == "promote" || command == "promote-check" || (command == "workflow" && Parms.Subcommand == "promote")
+	if !organizationWide {
 		return
 	}
 	if len(Parms.Targets) != 0 {
@@ -174,7 +219,7 @@ func extractMaterializeOperands(command string, Parms *structures.Parms) {
 	Parms.Targets = nil
 }
 
-func parseArguments(args []string) structures.Parms {
+func parseArguments(command string, subcommand string, args []string) structures.Parms {
 	rc := RC.OK
 	Parms := structures.Parms{
 		Verbose:    1,
@@ -189,7 +234,7 @@ func parseArguments(args []string) structures.Parms {
 
 		switch args[i][0] {
 		case '-':
-			parseFlagOrParameter(args, &i, &Parms)
+			parseFlagOrParameter(command, subcommand, args, &i, &Parms)
 		default:
 			parseTarget(args, i, &Parms)
 		}
@@ -202,14 +247,14 @@ func parseTarget(args []string, i int, Parms *structures.Parms) {
 	Parms.Targets = append(Parms.Targets, args[i])
 }
 
-func parseFlagOrParameter(args []string, i *int, Parms *structures.Parms) {
+func parseFlagOrParameter(command string, subcommand string, args []string, i *int, Parms *structures.Parms) {
 	switch len(args[*i]) {
 	case 1:
 		invalidArgument(Parms, args[*i])
 	case 2:
 		parseFlag(args, *i, Parms)
 	default:
-		parseParameter(args, i, Parms)
+		parseParameter(command, subcommand, args, i, Parms)
 	}
 }
 
@@ -237,8 +282,6 @@ func parseFlag(args []string, i int, Parms *structures.Parms) {
 		Parms.PrepareOnly = true
 	case 'M':
 		Parms.DryRun = true
-	case 'p':
-		Parms.Push = true
 	case 's':
 		Parms.Verbose = 0
 	case 't':
@@ -252,7 +295,7 @@ func parseFlag(args []string, i int, Parms *structures.Parms) {
 	}
 }
 
-func parseParameter(args []string, i *int, Parms *structures.Parms) {
+func parseParameter(command string, subcommand string, args []string, i *int, Parms *structures.Parms) {
 	if args[*i][1] != '-' {
 		invalidArgument(Parms, args[*i])
 	}
@@ -264,10 +307,10 @@ func parseParameter(args []string, i *int, Parms *structures.Parms) {
 	(*i)++
 	value := args[*i]
 
-	validateParameter(Parms, name, value)
+	validateParameter(command, subcommand, Parms, name, value)
 }
 
-func validateParameter(Parms *structures.Parms, name string, value string) {
+func validateParameter(command string, subcommand string, Parms *structures.Parms, name string, value string) {
 	switch name {
 	case "exclude":
 		processExclusions(Parms, value)
@@ -281,6 +324,21 @@ func validateParameter(Parms *structures.Parms, name string, value string) {
 		Parms.Path = value
 	case "platform":
 		Parms.Platforms = []string{strings.ToLower(strings.TrimSpace(value))}
+	case "source":
+		if command != "workflow" || subcommand != "promote" {
+			invalidArgument(Parms, "--"+name)
+		}
+		Parms.SourcePath = value
+	case "dest":
+		if command != "workflow" || subcommand != "promote" {
+			invalidArgument(Parms, "--"+name)
+		}
+		Parms.DestinationPath = value
+	case "version":
+		if command != "workflow" || subcommand != "promote" {
+			invalidArgument(Parms, "--"+name)
+		}
+		Parms.NextVersion = value
 	default:
 		invalidArgument(Parms, "--"+name)
 	}

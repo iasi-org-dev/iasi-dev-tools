@@ -58,7 +58,7 @@ func run() (exitCode int) {
 	Parms.LogFile = logFile
 	defer Parms.LogFile.Close()
 
-	prepareParms(&Parms)
+	prepareParms(command, &Parms)
 	logParms(Parms)
 
 	if Parms.PrepareOnly {
@@ -90,6 +90,8 @@ func run() (exitCode int) {
 		runners.Freeze(&Parms)
 	case "promote":
 		runners.Promote(&Parms)
+	case "promote-check":
+		runners.PromoteCheck(&Parms)
 	case "restore":
 		runners.Restore(&Parms)
 	case "materialize":

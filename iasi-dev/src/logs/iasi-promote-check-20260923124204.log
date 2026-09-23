@@ -1,0 +1,46 @@
+--- PARMS ------------------------------------------------
+Verbose: 7
+All: false
+Checkpoints: false
+Debug: false
+PrepareOnly: false
+DryRun: false
+Force: false
+Help: false
+Install: false
+Local: false
+Tolerant: false
+Message: "promote-check"
+Format: ""
+Platforms:
+Path: ""
+LogDir: ""
+Organization: ""
+SourceOrganization: ""
+DestinationOrganization: "iasi-org.github.io"
+SourcePath: "/mnt/data/iasi_org_check_case/iasi-org-dev.github.io"
+DestinationPath: "/mnt/data/iasi-org.github.io"
+Version: ""
+TargetVersion: "v0.5.0"
+MaterializeDestination: ""
+Subcommand: ""
+RequestedTargets:
+Targets:
+Exclusions:
+  - .git
+  - .github
+  - tests
+Repos:
+BlackList:
+----------------------------------------------------------
+12:42:04 - ============================================================
+12:42:04 - Promote check v0.5.0
+12:42:04 - ============================================================
+12:42:04 - Source path: /mnt/data/iasi_org_check_case/iasi-org-dev.github.io
+12:42:04 - Destination path: /mnt/data/iasi-org.github.io
+12:42:04 - Scanning suspicious references...
+12:42:04 - .git/config:9 [source-name]
+12:42:04 - index.html:9 [source-name]
+12:42:04 - index.html:14 [source-name]
+12:42:04 - index.html:21 [source-name]
+12:42:04 - 4 suspicious reference(s) found. No files modified.

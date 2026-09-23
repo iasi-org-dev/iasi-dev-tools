@@ -1,11 +1,9 @@
 package runners
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
-	"iasi-dev/internal/args"
 	"iasi-dev/internal/cli"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
@@ -16,12 +14,7 @@ import (
 // Promote is organization-wide and therefore runs once with the complete repository set.
 func Workflow(Parms *structures.Parms) {
 	if Parms.Subcommand == "promote" {
-		if Parms.Push {
-			cli.Header(*Parms, "Pushing %s", strings.TrimSuffix(Parms.Organization, "-dev"))
-		} else {
-			cli.Header(*Parms, "%s %s", workflowName(Parms.Subcommand), Parms.Organization)
-		}
-		workflowPromote(true, Parms)
+		workflowPromote(Parms)
 		return
 	}
 
@@ -212,48 +205,34 @@ func workflowRunStage(Parms *structures.Parms, runner func(*structures.Parms) []
 	}
 }
 
-// workflowPromote delegates the organization-wide promotion transaction.
-// Promotion always consumes a previously frozen version.
-func workflowPromote(standalone bool, Parms *structures.Parms) {
-	Parms.Repos = Promote(Parms)
-}
+// workflowPromote closes the current development version, advances development
+// to the requested next version, and promotes the frozen snapshot to destination.
+func workflowPromote(Parms *structures.Parms) {
+	frozenVersion := strings.TrimSpace(Parms.Version)
+	nextVersion := strings.TrimSpace(Parms.NextVersion)
 
-// workflowPromotePush publishes only the already materialized stable organization.
-// It deliberately skips promotion and materialization.
-func workflowPromotePush(Parms *structures.Parms) {
-	destination := workflowPromoteDestination(Parms)
-	info, err := os.Stat(destination)
-	if err != nil || !info.IsDir() {
-		cli.Error(RC.Error, *Parms, "No existe la organización estable local para publicar: %s", destination)
+	frozen, frozenOK := parseSemanticVersion(frozenVersion)
+	next, nextOK := parseSemanticVersion(nextVersion)
+	if !frozenOK {
+		cli.Error(RC.Error, *Parms, "La versión actual no es válida: %s", frozenVersion)
+	}
+	if !nextOK {
+		cli.Error(RC.Error, *Parms, "La nueva versión no es válida: %s", nextVersion)
+	}
+	if compareSemanticVersions(next, frozen) <= 0 {
+		cli.Error(RC.Error, *Parms, "La nueva versión %s debe ser superior a la versión actual %s.", nextVersion, frozenVersion)
 	}
 
-	pushParms := *Parms
-	pushParms.Targets = []string{destination}
-	pushParms.Repos = nil
-	pushParms.BlackList = nil
-	args.Prepare(&pushParms)
-	if len(pushParms.Repos) == 0 {
-		cli.Error(RC.Error, *Parms, "No se encontraron repositorios en la organización estable local: %s", destination)
-	}
+	Freeze(Parms)
 
-	Parms.Repos = pushParms.Repos
-	Parms.Repos = push(Parms)
-}
+	versionParms := *Parms
+	versionParms.TargetVersion = nextVersion
+	Version(&versionParms)
+	Parms.Version = versionParms.Version
 
-// workflowPromoteDestination returns the sibling stable organization workspace.
-// Example: C:\iasi-org-dev -> C:\iasi-org.
-func workflowPromoteDestination(Parms *structures.Parms) string {
-	stableOrganization := strings.TrimSuffix(Parms.Organization, "-dev")
-	if stableOrganization == Parms.Organization || stableOrganization == "" {
-		cli.Error(RC.Error, *Parms, "No se puede deducir la organización estable desde %q.", Parms.Organization)
-	}
-
-	root := workflowOrganizationRoot(Parms.Repos)
-	if root == "" {
-		cli.Error(RC.Error, *Parms, "No se puede deducir el workspace de la organización.")
-	}
-
-	return filepath.Join(filepath.Dir(root), stableOrganization)
+	promoteParms := *Parms
+	promoteParms.TargetVersion = frozenVersion
+	Parms.Repos = Promote(&promoteParms)
 }
 
 // workflowOrganizationRoot finds the common parent containing the organization's repositories.

@@ -16,6 +16,11 @@ import (
 // current HEAD of every repository. A freeze is always published to origin;
 // it never creates a copied or materialized workspace.
 func Freeze(Parms *structures.Parms) []string {
+	cli.Header(*Parms, "Freeze %s", Parms.Organization)
+	cli.Info(*Parms, "Version: %s", Parms.Version)
+	cli.Info(*Parms, "Mode: tags")
+	cli.Info(*Parms, "Validating...")
+
 	if _, ok := parseSemanticVersion(Parms.Version); !ok {
 		cli.Error(RC.Error, *Parms, "La versión actual no es válida: %s", Parms.Version)
 	}
@@ -24,6 +29,7 @@ func Freeze(Parms *structures.Parms) []string {
 	if root == "" {
 		cli.Error(RC.Error, *Parms, "No se puede deducir el workspace completo de la organización.")
 	}
+	cli.Info(*Parms, "Workspace: %s", root)
 
 	repositories := completeOrganizationRepositories(Parms, root)
 	if len(repositories) == 0 {
@@ -31,11 +37,6 @@ func Freeze(Parms *structures.Parms) []string {
 	}
 
 	validateFreezeVersion(Parms, repositories, Parms.Version)
-
-	cli.Header(*Parms, "Freeze %s", Parms.Organization)
-	cli.Info(*Parms, "Version: %s", Parms.Version)
-	cli.Info(*Parms, "Workspace: %s", root)
-	cli.Info(*Parms, "Mode: tags")
 
 	if Parms.DryRun {
 		for _, repository := range repositories {
@@ -45,6 +46,7 @@ func Freeze(Parms *structures.Parms) []string {
 		return append([]string{}, repositories...)
 	}
 
+	cli.Info(*Parms, "Verifying repositories...")
 	validateFreezeWorkingTrees(Parms, repositories)
 
 	createdTags := []string{}
@@ -58,6 +60,7 @@ func Freeze(Parms *structures.Parms) []string {
 		rollbackFreezeLocalTags(Parms, Parms.Version, createdTags)
 	}()
 
+	cli.Info(*Parms, "Freezing repositories...")
 	ensureFreezeTags(Parms, repositories, Parms.Version, &createdTags, &pushedTags)
 	committed = true
 

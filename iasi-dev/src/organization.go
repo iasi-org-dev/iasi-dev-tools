@@ -13,15 +13,46 @@ import (
 )
 
 // prepareParms discovers the effective repositories, resolves the organization and loads its VERSION.
-func prepareParms(Parms *structures.Parms) {
+func prepareParms(command string, Parms *structures.Parms) {
+	if command == "promote-check" {
+		preparePromotePaths(Parms)
+		commands.SetDryRun(Parms.DryRun)
+		return
+	}
+
+	if command == "promote" {
+		preparePromotePaths(Parms)
+		Parms.Targets = []string{Parms.SourcePath}
+		args.Prepare(Parms)
+		prepareOrganization(Parms)
+		Parms.SourceOrganization = Parms.Organization
+		commands.SetDryRun(Parms.DryRun)
+		return
+	}
+
+	if command == "workflow" && Parms.Subcommand == "promote" {
+		preparePromotePaths(Parms)
+		Parms.Targets = []string{Parms.SourcePath}
+		args.Prepare(Parms)
+		prepareOrganization(Parms)
+		Parms.SourceOrganization = Parms.Organization
+		loadOrganizationVersion(Parms)
+		commands.SetDryRun(Parms.DryRun)
+		return
+	}
+
 	args.Prepare(Parms)
 	prepareOrganization(Parms)
-	if !Parms.Push {
+	if !isVersionWrite(command, Parms) {
 		loadOrganizationVersion(Parms)
 	}
 
 	// Check modes become effective only after the real preparation has completed.
 	commands.SetDryRun(Parms.DryRun)
+}
+
+func isVersionWrite(command string, Parms *structures.Parms) bool {
+	return command == "version" && Parms.TargetVersion != ""
 }
 
 // prepareOrganization keeps an explicit organization or deduces one from the discovered Git origins.

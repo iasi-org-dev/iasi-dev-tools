@@ -2,6 +2,7 @@ package runners
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,96 +20,194 @@ type semanticVersion struct {
 	patch int
 }
 
-// Promote materializes one previously frozen organization version into the
-// stable organization. Frozen versions are read from Git tags, never from a
-// persistent copied freeze workspace.
+// Promote publishes one frozen organization snapshot without carrying development history.
+// The requested version, source path and destination path are explicit; no workspace location is inferred.
 func Promote(Parms *structures.Parms) []string {
-	if Parms.Push {
-		workflowPromotePush(Parms)
-		return append([]string{}, Parms.Repos...)
-	}
-
 	requireTargetVersion(Parms, "promote")
 	if _, ok := parseSemanticVersion(Parms.TargetVersion); !ok {
 		cli.Error(RC.Error, *Parms, "La versión a promover no es válida: %s", Parms.TargetVersion)
 	}
-
-	root := organizationWorkspaceRoot(Parms)
-	if root == "" {
-		cli.Error(RC.Error, *Parms, "No se puede deducir el workspace completo de la organización.")
+	if Parms.SourcePath == "" || Parms.DestinationPath == "" {
+		cli.Error(RC.Error, *Parms, "promote requiere source-path y destination-path explícitos.")
 	}
-	sourceRepositories := completeOrganizationRepositories(Parms, root)
+
+	sourceRoot := filepath.Clean(Parms.SourcePath)
+	destination := filepath.Clean(Parms.DestinationPath)
+	validatePromotePaths(Parms, sourceRoot, destination)
+
+	if Parms.DestinationOrganization == "" {
+		Parms.DestinationOrganization = filepath.Base(destination)
+	}
+
+	cli.Header(*Parms, "Promote %s", Parms.TargetVersion)
+	cli.Info(*Parms, "Source path: %s", sourceRoot)
+	cli.Info(*Parms, "Destination path: %s", destination)
+	if Parms.SourceOrganization != "" {
+		cli.Info(*Parms, "Source organization: %s", Parms.SourceOrganization)
+	}
+	cli.Info(*Parms, "Destination organization: %s", Parms.DestinationOrganization)
+	cli.Info(*Parms, "Validating...")
+
+	sourceRepositories := completeOrganizationRepositories(Parms, sourceRoot)
 	if len(sourceRepositories) == 0 {
-		cli.Error(RC.Error, *Parms, "No se encontraron repositorios para promover.")
+		cli.Error(RC.Error, *Parms, "No se encontraron repositorios para promover en %s.", sourceRoot)
 	}
-
-	promotion := *Parms
-	promotion.Repos = sourceRepositories
-	promotion.Targets = nil
-	promotion.TargetDetails = nil
-	promotion.BlackList = nil
-	promotion.MaterializeDestination = workflowPromoteDestination(&promotion)
-
-	temporary := promoteTemporary(promotion.MaterializeDestination, Parms.TargetVersion)
-
-	fmt.Printf("Organization: %s\n", Parms.Organization)
-	fmt.Printf("Frozen version: %s\n", Parms.TargetVersion)
-	fmt.Printf("Source: Git tags\n")
-	fmt.Printf("Temporary workspace: %s\n", temporary)
-
-	if Parms.DryRun {
-		for _, repository := range sourceRepositories {
-			name := filepath.Base(repository)
-			cli.Preview("Promote source [%s]: origin tag %s -> %s\n", name, Parms.TargetVersion, filepath.Join(temporary, name))
-		}
-		cli.Preview("Promote tagged version: %s -> %s\n", Parms.TargetVersion, promotion.MaterializeDestination)
-		if !Parms.Local {
-			cli.Preview("Publish stable organization: %s\n", promotion.MaterializeDestination)
-		}
-		return append([]string{}, sourceRepositories...)
-	}
-
+	validatePromotionSource(Parms, sourceRepositories)
 	validatePromotionTags(Parms, sourceRepositories, Parms.TargetVersion)
 
-	if err := os.RemoveAll(temporary); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo limpiar el workspace temporal %s: %v", temporary, err)
-	}
-	if err := os.MkdirAll(temporary, 0755); err != nil {
-		cli.Error(RC.Error, *Parms, "No se pudo crear el workspace temporal %s: %v", temporary, err)
-	}
-	defer os.RemoveAll(temporary)
+	temporary := promoteTemporary(destination, Parms.TargetVersion)
 
-	promotion.Repos = clonePromotionVersion(Parms, sourceRepositories, temporary, Parms.TargetVersion)
-
-	cli.Step(*Parms, "Materializing stable organization")
-	repositories := materializeLocal(&promotion)
-	if len(repositories) == 0 {
-		Parms.Repos = repositories
-		return repositories
+	if Parms.DryRun {
+		cli.Info(*Parms, "Preparing workspace...")
+		cli.Preview("Promote workspace: %s\n", temporary)
+		cli.Info(*Parms, "Promoting repositories...")
+		for _, repository := range sourceRepositories {
+			name := filepath.Base(repository)
+			origin := promotionOrigin(Parms, repository)
+			cli.Preview("Clone %s at %s: %s -> %s\n", name, Parms.TargetVersion, origin, filepath.Join(temporary, name))
+			cli.Preview("Create history-free repository: %s -> https://github.com/%s/%s.git\n", name, Parms.DestinationOrganization, name)
+		}
+		cli.Info(*Parms, "Postprocessing...")
+		promotePostprocessPreview(Parms)
+		if !Parms.Local {
+			cli.Info(*Parms, "Publishing...")
+			cli.Preview("Set %s VERSION to %s\n", Parms.DestinationOrganization, Parms.TargetVersion)
+		}
+		cli.Preview("Replace local destination: %s -> %s\n", temporary, destination)
+		return promoteDestinationRepositories(destination, sourceRepositories, Parms.SourceOrganization, Parms.DestinationOrganization)
 	}
-	if Parms.Local {
-		Parms.Repos = repositories
-		cli.Success(*Parms, "Organization promoted locally from tag %s.", Parms.TargetVersion)
-		return repositories
+
+	cli.Info(*Parms, "Preparing workspace...")
+	if err := preparePromoteTemporary(temporary); err != nil {
+		cli.Error(RC.Error, *Parms, "No se pudo preparar el workspace temporal %s: %v", temporary, err)
 	}
 
-	promotion.Repos = repositories
-	repositories = push(&promotion)
+	completed := false
+	defer func() {
+		if !completed {
+			_ = os.RemoveAll(temporary)
+		}
+	}()
+
+	cli.Info(*Parms, "Promoting repositories...")
+	promotedTemporary := promoteRepositories(Parms, sourceRepositories, temporary, Parms.TargetVersion)
+
+	cli.Info(*Parms, "Postprocessing...")
+	promotedTemporary = promotePostprocess(Parms, temporary, promotedTemporary)
+
+	if !Parms.Local {
+		validatePromotionDestinations(Parms, promotedTemporary)
+		cli.Info(*Parms, "Publishing...")
+		pushPromotionRepositories(Parms, promotedTemporary)
+		cli.Info(*Parms, "Propagating version...")
+		setOrganizationVersionFor(Parms, Parms.DestinationOrganization, Parms.TargetVersion)
+	}
+
+	if err := promoteReplace(temporary, destination); err != nil {
+		cli.Error(RC.Error, *Parms, "No se pudo instalar la promoción en %s: %v", destination, err)
+	}
+	completed = true
+
+	repositories := promoteDestinationRepositories(destination, sourceRepositories, Parms.SourceOrganization, Parms.DestinationOrganization)
 	Parms.Repos = repositories
-	cli.Success(*Parms, "Organization promoted from tag %s.", Parms.TargetVersion)
+	cli.Success(*Parms, "Promoted %s.", Parms.TargetVersion)
 	return repositories
 }
 
+func validatePromotePaths(Parms *structures.Parms, source string, destination string) {
+	if strings.EqualFold(filepath.Clean(source), filepath.Clean(destination)) {
+		cli.Error(RC.Error, *Parms, "source-path y destination-path deben ser rutas distintas.")
+	}
+	if promotePathContains(source, destination) || promotePathContains(destination, source) {
+		cli.Error(RC.Error, *Parms, "source-path y destination-path no pueden contenerse entre sí.")
+	}
+
+	info, err := os.Stat(source)
+	if err != nil || !info.IsDir() {
+		cli.Error(RC.Error, *Parms, "source-path no existe o no es un directorio: %s", source)
+	}
+	if info, err := os.Stat(destination); err == nil && !info.IsDir() {
+		cli.Error(RC.Error, *Parms, "destination-path existe pero no es un directorio: %s", destination)
+	} else if err != nil && !os.IsNotExist(err) {
+		cli.Error(RC.Error, *Parms, "No se puede acceder a destination-path %s: %v", destination, err)
+	}
+}
+
+func promotePathContains(parent string, child string) bool {
+	relative, err := filepath.Rel(filepath.Clean(parent), filepath.Clean(child))
+	if err != nil || relative == "." || relative == ".." {
+		return false
+	}
+	return !strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+
 func promoteTemporary(destination string, version string) string {
-	parent := filepath.Dir(filepath.Clean(destination))
 	name := filepath.Base(filepath.Clean(destination))
-	return filepath.Join(parent, "."+name+".promote-"+version+".tmp")
+	return filepath.Join(os.TempDir(), "."+name+".promote-"+version+".tmp")
+}
+
+func promoteBackup(destination string) string {
+	name := filepath.Base(filepath.Clean(destination))
+	return filepath.Join(os.TempDir(), "."+name+".promote.bak")
+}
+
+func preparePromoteTemporary(temporary string) error {
+	if err := os.RemoveAll(temporary); err != nil {
+		return err
+	}
+	return os.MkdirAll(temporary, 0755)
+}
+
+func validatePromotionSource(Parms *structures.Parms, repositories []string) {
+	if Parms.SourceOrganization == "" {
+		return
+	}
+	for _, repository := range repositories {
+		origin := promotionOrigin(Parms, repository)
+		organization := promotionGitHubOrganization(origin)
+		if organization != "" && !strings.EqualFold(organization, Parms.SourceOrganization) {
+			cli.Error(RC.Error, *Parms, "El origin de %s pertenece a %s, no a %s.", filepath.Base(repository), organization, Parms.SourceOrganization)
+		}
+	}
+}
+
+func promotionGitHubOrganization(remote string) string {
+	remote = strings.TrimSpace(remote)
+	if remote == "" {
+		return ""
+	}
+
+	const scpPrefix = "git@github.com:"
+	if strings.HasPrefix(remote, scpPrefix) {
+		return promotionFirstPathPart(strings.TrimPrefix(remote, scpPrefix))
+	}
+
+	const sshPrefix = "ssh://git@github.com/"
+	if strings.HasPrefix(remote, sshPrefix) {
+		return promotionFirstPathPart(strings.TrimPrefix(remote, sshPrefix))
+	}
+
+	parsed, err := url.Parse(remote)
+	if err != nil || !strings.EqualFold(parsed.Hostname(), "github.com") {
+		return ""
+	}
+	return promotionFirstPathPart(strings.TrimPrefix(parsed.Path, "/"))
+}
+
+func promotionFirstPathPart(path string) string {
+	path = strings.TrimSuffix(strings.TrimSpace(path), ".git")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) < 2 || parts[0] == "" {
+		return ""
+	}
+	return parts[0]
 }
 
 func validatePromotionTags(Parms *structures.Parms, repositories []string, version string) {
 	for _, repository := range repositories {
 		if _, exists := freezeRemoteTagCommit(Parms, repository, version); !exists {
-			cli.Error(RC.Error, *Parms, "El tag %s de %s no está publicado en origin.", version, repository)
+			cli.Error(RC.Error, *Parms, "El tag %s de %s no está publicado en origin.", version, filepath.Base(repository))
 		}
 	}
 }
@@ -121,21 +220,115 @@ func promotionOrigin(Parms *structures.Parms, repository string) string {
 	return strings.TrimSpace(result.Stdout)
 }
 
-func clonePromotionVersion(Parms *structures.Parms, repositories []string, root string, version string) []string {
-	clones := make([]string, 0, len(repositories))
+func promoteRepositories(Parms *structures.Parms, repositories []string, root string, version string) []string {
+	promoted := make([]string, 0, len(repositories))
 	for _, repository := range repositories {
 		name := filepath.Base(repository)
 		destination := filepath.Join(root, name)
 		origin := promotionOrigin(Parms, repository)
-		cli.Step(*Parms, "Reading %s at %s", name, version)
 
-		result := commands.RunLogged(root, Parms.LogFile, "git", "clone", "--no-hardlinks", "--branch", version, "--single-branch", origin, destination)
+		cli.Step(*Parms, "Cloning %s...", name)
+		result := commands.RunLogged(root, Parms.LogFile, "git", "clone", "--depth", "1", "--branch", version, "--single-branch", origin, destination)
 		if result.RC != RC.OK {
-			cli.Error(RC.Error, *Parms, "No se pudo leer %s desde el tag publicado %s. Revisa el log: %s", name, version, logName(*Parms))
+			cli.Error(RC.Error, *Parms, "No se pudo clonar %s desde el tag %s. Revisa el log: %s", name, version, logName(*Parms))
 		}
-		clones = append(clones, destination)
+
+		if err := os.RemoveAll(filepath.Join(destination, ".git")); err != nil {
+			cli.Error(RC.Error, *Parms, "No se pudo eliminar la historia Git de %s: %v", name, err)
+		}
+		if !promoteGitInit(Parms, destination) {
+			cli.Error(RC.Error, *Parms, "No se pudo inicializar Git en %s. Revisa el log: %s", name, logName(*Parms))
+		}
+		if !promoteDestinationRemote(Parms, destination, Parms.DestinationOrganization, name) {
+			cli.Error(RC.Error, *Parms, "No se pudo configurar origin en %s. Revisa el log: %s", name, logName(*Parms))
+		}
+		if !promoteCommit(Parms, destination, version) {
+			cli.Error(RC.Error, *Parms, "No se pudo crear el snapshot promovido de %s. Revisa el log: %s", name, logName(*Parms))
+		}
+		promoted = append(promoted, destination)
 	}
-	return clones
+	return promoted
+}
+
+func promoteGitInit(Parms *structures.Parms, repository string) bool {
+	result := commands.RunLogged(repository, Parms.LogFile, "git", "init", "-b", "main")
+	return result.RC == RC.OK
+}
+
+func promoteDestinationRemote(Parms *structures.Parms, repository string, organization string, name string) bool {
+	remote := fmt.Sprintf("https://github.com/%s/%s.git", organization, name)
+	result := commands.RunLogged(repository, Parms.LogFile, "git", "remote", "add", "origin", remote)
+	return result.RC == RC.OK
+}
+
+func promoteCommit(Parms *structures.Parms, repository string, version string) bool {
+	result := commands.RunLogged(repository, Parms.LogFile, "git", "add", "-A", ".")
+	if result.RC != RC.OK {
+		return false
+	}
+	result = commands.RunLogged(repository, Parms.LogFile, "git", "commit", "-m", "IASI organization version "+version)
+	return result.RC == RC.OK
+}
+
+func validatePromotionDestinations(Parms *structures.Parms, repositories []string) {
+	for _, repository := range repositories {
+		result := commands.Run(repository, Parms.LogFile, "git", "ls-remote", "origin")
+		if result.RC != RC.OK {
+			cli.Error(RC.Error, *Parms, "No se puede acceder al repositorio destino %s/%s.", Parms.DestinationOrganization, filepath.Base(repository))
+		}
+	}
+}
+
+func pushPromotionRepositories(Parms *structures.Parms, repositories []string) {
+	for _, repository := range repositories {
+		result := commands.RunLogged(repository, Parms.LogFile, "git", "push", "-u", "--force", "origin", "HEAD:main")
+		if result.RC != RC.OK {
+			cli.Error(RC.Error, *Parms, "No se pudo publicar %s. Revisa el log: %s", filepath.Base(repository), logName(*Parms))
+		}
+	}
+}
+
+func promoteReplace(temporary string, destination string) error {
+	backup := promoteBackup(destination)
+	if err := os.RemoveAll(backup); err != nil {
+		return err
+	}
+
+	destinationExists := false
+	if info, err := os.Stat(destination); err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("el destino existe pero no es un directorio: %s", destination)
+		}
+		destinationExists = true
+		if err := os.Rename(destination, backup); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	if err := os.Rename(temporary, destination); err != nil {
+		if destinationExists {
+			_ = os.Rename(backup, destination)
+		}
+		return err
+	}
+
+	if destinationExists {
+		if err := os.RemoveAll(backup); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func promoteDestinationRepositories(destination string, sourceRepositories []string, sourceOrganization string, destinationOrganization string) []string {
+	repositories := make([]string, 0, len(sourceRepositories))
+	for _, repository := range sourceRepositories {
+		name := promotePostprocessRepositoryName(filepath.Base(repository), sourceOrganization, destinationOrganization)
+		repositories = append(repositories, filepath.Join(destination, name))
+	}
+	return repositories
 }
 
 func formatCommandArguments(args []string) string {

@@ -13,7 +13,6 @@ type Parms struct {
 	Help                   bool     // Muestra la ayuda.
 	Install                bool     // Instala el artefacto cuando proceda.
 	Local                  bool     // Mantiene local la publicación cuando la operación lo soporta.
-	Push                   bool     // Ejecuta solo la publicación remota cuando promote lo soporta.
 	Tolerant               bool     // Continúa cuando una operación falla.
 	Message                string   // Mensaje utilizado para el commit.
 	Format                 string   // Formato o formatos de salida.
@@ -21,8 +20,13 @@ type Parms struct {
 	Path                   string   // Directorio de trabajo solicitado con --path.
 	LogDir                 string   // Directorio de logs solicitado con --log.
 	Organization           string   // Organización GitHub explícita o deducida del workspace.
+	SourceOrganization      string   // Organización GitHub origen de promote.
+	DestinationOrganization string   // Organización GitHub destino de promote.
+	SourcePath              string   // Ruta origen explícita de promote, resuelta a absoluta al parsear.
+	DestinationPath         string   // Ruta destino explícita de promote, resuelta a absoluta al parsear.
 	Version                string   // Versión actual de la organización leída de GitHub.
 	TargetVersion          string   // Versión explícita solicitada por version, promote o restore.
+	NextVersion            string   // Nueva versión de desarrollo solicitada por workflow promote.
 	MaterializeDestination string   // Directorio destino solicitado por materialize, resuelto antes de --path.
 	Subcommand             string   // Subcomando cuando command es workflow.
 	LogFile                *os.File // Handle al fichero de log de la ejecución.

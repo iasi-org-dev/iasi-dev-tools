@@ -35,12 +35,12 @@ func TestVersionPrintsPreparedVersion(t *testing.T) {
 	}
 }
 
-func TestVersionSetsExplicitHigherVersion(t *testing.T) {
+func TestVersionSetsExplicitVersion(t *testing.T) {
 	rc := RC.OK
 	parms := structures.Parms{
 		Organization:  "iasi-org-dev",
 		Version:       "v0.5.0",
-		TargetVersion: "v0.7.0",
+		TargetVersion: "v0.4.0",
 		RC:            &rc,
 	}
 
@@ -48,7 +48,33 @@ func TestVersionSetsExplicitHigherVersion(t *testing.T) {
 	defer commands.SetDryRun(false)
 	Version(&parms)
 
-	if parms.Version != "v0.7.0" {
-		t.Fatalf("Version = %q, want v0.7.0", parms.Version)
+	if parms.Version != "v0.4.0" {
+		t.Fatalf("Version = %q, want v0.4.0", parms.Version)
+	}
+}
+
+func TestSetOrganizationVersionForUsesExplicitOrganization(t *testing.T) {
+	rc := RC.OK
+	logFile, err := os.CreateTemp(t.TempDir(), "version-*.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logFile.Close()
+
+	parms := structures.Parms{RC: &rc, LogFile: logFile}
+	commands.SetDryRun(true)
+	defer commands.SetDryRun(false)
+	setOrganizationVersionFor(&parms, "iasi-org", "v0.5.0")
+
+	if err := logFile.Sync(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(logFile.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "gh variable set VERSION --org iasi-org --body v0.5.0") {
+		t.Fatalf("version propagation command not found in log: %s", text)
 	}
 }

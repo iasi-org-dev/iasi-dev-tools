@@ -55,6 +55,26 @@ func TestCompareSemanticVersions(t *testing.T) {
 	}
 }
 
+
+func TestPromoteTemporaryPathsUseSystemTemp(t *testing.T) {
+	destination := filepath.Join("C:", "iasi-org")
+	temporary := promoteTemporary(destination, "v0.5.0")
+	backup := promoteBackup(destination)
+
+	if filepath.Clean(filepath.Dir(temporary)) != filepath.Clean(os.TempDir()) {
+		t.Fatalf("temporary parent = %q, want system temp %q", filepath.Dir(temporary), os.TempDir())
+	}
+	if filepath.Clean(filepath.Dir(backup)) != filepath.Clean(os.TempDir()) {
+		t.Fatalf("backup parent = %q, want system temp %q", filepath.Dir(backup), os.TempDir())
+	}
+	if filepath.Base(temporary) != ".iasi-org.promote-v0.5.0.tmp" {
+		t.Fatalf("temporary name = %q", filepath.Base(temporary))
+	}
+	if filepath.Base(backup) != ".iasi-org.promote.bak" {
+		t.Fatalf("backup name = %q", filepath.Base(backup))
+	}
+}
+
 func TestFreezePublishesTagsWithoutCreatingWorkspace(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "iasi-org-dev")
@@ -123,6 +143,9 @@ func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("frozen\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(repository, "config.yml"), []byte("organization: iasi-org-dev\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	gitTest(t, repository, "add", ".")
 	gitTest(t, repository, "commit", "-m", "frozen")
 	gitTest(t, base, "init", "--bare", remote)
@@ -147,6 +170,9 @@ func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
 	if err := os.MkdirAll(stable, 0755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(stable, "OLD.txt"), []byte("old destination\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("GIT_AUTHOR_NAME", "IASI Test")
 	t.Setenv("GIT_AUTHOR_EMAIL", "iasi@example.invalid")
 	t.Setenv("GIT_COMMITTER_NAME", "IASI Test")
@@ -154,12 +180,16 @@ func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
 
 	rc = RC.OK
 	promoteParms := structures.Parms{
-		Organization:  "iasi-org-dev",
-		TargetVersion: "v0.5.0",
-		Local:         true,
-		Repos:         []string{repository},
-		Exclusions:    []string{".git", ".github", "tests"},
-		RC:            &rc,
+		Organization:            "iasi-org-dev",
+		SourceOrganization:      "iasi-org-dev",
+		DestinationOrganization: "iasi-org",
+		SourcePath:              root,
+		DestinationPath:         stable,
+		TargetVersion:           "v0.5.0",
+		Local:                   true,
+		Repos:                   []string{repository},
+		Exclusions:              []string{".git", ".github", "tests"},
+		RC:                      &rc,
 	}
 
 	promoted := Promote(&promoteParms)
@@ -173,6 +203,25 @@ func TestPromoteMaterializesTaggedVersionNotCurrentHead(t *testing.T) {
 	}
 	if string(data) != "frozen\n" {
 		t.Fatalf("promoted content = %q, want frozen tagged content", string(data))
+	}
+	config, err := os.ReadFile(filepath.Join(stable, "repo-a", "config.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(config) != "organization: iasi-org\n" {
+		t.Fatalf("postprocessed config = %q, want destination organization", string(config))
+	}
+
+	commitCount := strings.TrimSpace(gitTest(t, filepath.Join(stable, "repo-a"), "rev-list", "--count", "HEAD"))
+	if commitCount != "1" {
+		t.Fatalf("promoted history has %s commits, want 1", commitCount)
+	}
+	remoteURL := strings.TrimSpace(gitTest(t, filepath.Join(stable, "repo-a"), "remote", "get-url", "origin"))
+	if remoteURL != "https://github.com/iasi-org/repo-a.git" {
+		t.Fatalf("promoted origin = %q, want destination organization", remoteURL)
+	}
+	if _, err := os.Stat(filepath.Join(stable, "OLD.txt")); !os.IsNotExist(err) {
+		t.Fatalf("old destination content survived promotion: %v", err)
 	}
 
 	temporary := promoteTemporary(stable, "v0.5.0")
@@ -233,5 +282,70 @@ func TestFreezeRequiresVersionGreaterThanEveryExistingTag(t *testing.T) {
 
 			Freeze(&parms)
 		})
+	}
+}
+
+func TestPromoteDiscardsExistingTemporaryWorkspace(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "iasi-org-dev")
+	repository := filepath.Join(root, "repo-a")
+	remote := filepath.Join(base, "repo-a.git")
+	stable := filepath.Join(base, "iasi-org")
+	temporary := promoteTemporary(stable, "v0.5.0")
+
+	gitTest(t, base, "init", "-b", "main", repository)
+	gitTest(t, repository, "config", "user.name", "IASI Test")
+	gitTest(t, repository, "config", "user.email", "iasi@example.invalid")
+	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("frozen\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gitTest(t, repository, "add", ".")
+	gitTest(t, repository, "commit", "-m", "frozen")
+	gitTest(t, base, "init", "--bare", remote)
+	gitTest(t, repository, "remote", "add", "origin", remote)
+
+	rc := RC.OK
+	freezeParms := structures.Parms{
+		Organization: "iasi-org-dev",
+		Version:      "v0.5.0",
+		Repos:        []string{repository},
+		Exclusions:   []string{".git", ".github", "tests"},
+		RC:           &rc,
+	}
+	Freeze(&freezeParms)
+
+	if err := os.MkdirAll(temporary, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "STALE.txt"), []byte("stale\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("GIT_AUTHOR_NAME", "IASI Test")
+	t.Setenv("GIT_AUTHOR_EMAIL", "iasi@example.invalid")
+	t.Setenv("GIT_COMMITTER_NAME", "IASI Test")
+	t.Setenv("GIT_COMMITTER_EMAIL", "iasi@example.invalid")
+
+	rc = RC.OK
+	promoteParms := structures.Parms{
+		Organization:            "iasi-org-dev",
+		SourceOrganization:      "iasi-org-dev",
+		DestinationOrganization: "iasi-org",
+		SourcePath:              root,
+		DestinationPath:         stable,
+		TargetVersion:           "v0.5.0",
+		Local:                   true,
+		Repos:                   []string{repository},
+		Exclusions:              []string{".git", ".github", "tests"},
+		RC:                      &rc,
+	}
+
+	Promote(&promoteParms)
+
+	if _, err := os.Stat(filepath.Join(stable, "STALE.txt")); !os.IsNotExist(err) {
+		t.Fatalf("stale temporary workspace content survived promotion: %v", err)
+	}
+	if _, err := os.Stat(temporary); !os.IsNotExist(err) {
+		t.Fatalf("temporary workspace still exists after promotion: %v", err)
 	}
 }
