@@ -212,28 +212,10 @@ func workflowRunStage(Parms *structures.Parms, runner func(*structures.Parms) []
 	}
 }
 
-// workflowPromote promotes the complete development organization, materializes
-// the resulting state locally as the stable organization and, unless -l is active, pushes it.
+// workflowPromote delegates the organization-wide promotion transaction.
+// Promotion always consumes a previously frozen version.
 func workflowPromote(standalone bool, Parms *structures.Parms) {
-	if Parms.Push {
-		workflowPromotePush(Parms)
-		return
-	}
-
 	Parms.Repos = Promote(Parms)
-	if len(Parms.Repos) == 0 {
-		return
-	}
-
-	destination := workflowPromoteDestination(Parms)
-	cli.Step(*Parms, "Materializing stable organization")
-	Parms.MaterializeDestination = destination
-	Parms.Repos = materializeLocal(Parms)
-	if len(Parms.Repos) == 0 || Parms.Local {
-		return
-	}
-
-	Parms.Repos = push(Parms)
 }
 
 // workflowPromotePush publishes only the already materialized stable organization.

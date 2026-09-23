@@ -22,7 +22,7 @@ type Parms struct {
 	LogDir                 string   // Directorio de logs solicitado con --log.
 	Organization           string   // Organización GitHub explícita o deducida del workspace.
 	Version                string   // Versión actual de la organización leída de GitHub.
-	TargetVersion          string   // Versión solicitada por promote o restore.
+	TargetVersion          string   // Versión explícita solicitada por version, promote o restore.
 	MaterializeDestination string   // Directorio destino solicitado por materialize, resuelto antes de --path.
 	Subcommand             string   // Subcomando cuando command es workflow.
 	LogFile                *os.File // Handle al fichero de log de la ejecución.

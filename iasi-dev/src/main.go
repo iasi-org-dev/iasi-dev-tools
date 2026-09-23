@@ -86,6 +86,8 @@ func run() (exitCode int) {
 		runners.Sync(&Parms)
 	case "version":
 		runners.Version(&Parms)
+	case "freeze":
+		runners.Freeze(&Parms)
 	case "promote":
 		runners.Promote(&Parms)
 	case "restore":

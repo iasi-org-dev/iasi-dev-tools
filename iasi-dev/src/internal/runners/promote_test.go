@@ -55,38 +55,81 @@ func TestCompareSemanticVersions(t *testing.T) {
 	}
 }
 
-func TestHighestSemanticVersion(t *testing.T) {
-	fallback, _ := parseSemanticVersion("v0.3.0")
-	highest, text := highestSemanticVersion([]string{"other", "v0.1.0", "v0.6.0", "v0.4.0"}, fallback, "v0.3.0")
-	want, _ := parseSemanticVersion("v0.6.0")
-
-	if compareSemanticVersions(highest, want) != 0 {
-		t.Fatal("highest semantic version must be v0.6.0")
-	}
-	if text != "v0.6.0" {
-		t.Fatalf("highest text = %q, want v0.6.0", text)
+func TestFreezeDestinationUsesCurrentVersion(t *testing.T) {
+	root := filepath.Join("C:", "iasi-org-dev")
+	got := freezeDestination(root, "iasi-org-dev", "v0.5.0")
+	want := filepath.Join("C:", "iasi-org-v0.5.0")
+	if got != want {
+		t.Fatalf("freezeDestination() = %q, want %q", got, want)
 	}
 }
 
-func TestHighestSemanticVersionFallsBackToCurrentVersion(t *testing.T) {
-	fallback, _ := parseSemanticVersion("v0.5.0")
-	highest, text := highestSemanticVersion([]string{"not-a-version", "release"}, fallback, "v0.5.0")
-
-	if compareSemanticVersions(highest, fallback) != 0 {
-		t.Fatal("highest semantic version must fall back to current version")
+func TestWriteAndReadFreezeManifest(t *testing.T) {
+	root := t.TempDir()
+	manifest := freezeManifest{
+		Organization: "iasi-org-dev",
+		Version:      "v0.5.0",
+		Repositories: map[string]string{"repo-a": "abc", "repo-b": "def"},
 	}
-	if text != "v0.5.0" {
-		t.Fatalf("highest text = %q, want v0.5.0", text)
+	if err := writeFreezeManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readFreezeManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Organization != manifest.Organization || got.Version != manifest.Version || len(got.Repositories) != 2 {
+		t.Fatalf("manifest = %+v, want %+v", got, manifest)
 	}
 }
 
-func TestPromoteTagsCreatesLocalAndRemoteTags(t *testing.T) {
+func TestValidateFrozenOrganizationUsesManifestCommits(t *testing.T) {
 	base := t.TempDir()
+	root := filepath.Join(base, "iasi-org-v0.5.0")
+	repository := filepath.Join(root, "repo-a")
+	gitTest(t, base, "init", "-b", "main", repository)
+	gitTest(t, repository, "config", "user.name", "IASI Test")
+	gitTest(t, repository, "config", "user.email", "iasi@example.invalid")
+	if err := os.WriteFile(filepath.Join(repository, "README.md"), []byte("frozen\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gitTest(t, repository, "add", ".")
+	gitTest(t, repository, "commit", "-m", "frozen")
+	commit := repositoryHead(&structures.Parms{RC: intPtr(RC.OK)}, repository)
+
+	manifest := freezeManifest{
+		Organization: "iasi-org-dev",
+		Version:      "v0.5.0",
+		Repositories: map[string]string{"repo-a": commit},
+	}
+	if err := writeFreezeManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+
+	rc := RC.OK
+	parms := structures.Parms{
+		Organization: "iasi-org-dev",
+		TargetVersion: "v0.5.0",
+		Exclusions: []string{".git", ".github", "tests"},
+		RC: &rc,
+	}
+	repositories := validateFrozenOrganization(&parms, root, "v0.5.0")
+	if len(repositories) != 1 || filepath.Clean(repositories[0]) != filepath.Clean(repository) {
+		t.Fatalf("repositories = %v, want [%s]", repositories, repository)
+	}
+}
+
+func intPtr(value int) *int {
+	return &value
+}
+
+func TestFreezeCreatesCompleteVersionedWorkspace(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "iasi-org-dev")
 	repositories := []string{}
-	remotes := []string{}
 
 	for _, name := range []string{"repo-a", "repo-b"} {
-		repository := filepath.Join(base, name)
+		repository := filepath.Join(root, name)
 		remote := filepath.Join(base, name+".git")
 		gitTest(t, base, "init", "-b", "main", repository)
 		gitTest(t, repository, "config", "user.name", "IASI Test")
@@ -99,59 +142,33 @@ func TestPromoteTagsCreatesLocalAndRemoteTags(t *testing.T) {
 		gitTest(t, base, "init", "--bare", remote)
 		gitTest(t, repository, "remote", "add", "origin", remote)
 		repositories = append(repositories, repository)
-		remotes = append(remotes, remote)
 	}
-
-	rc := RC.OK
-	parms := structures.Parms{TargetVersion: "v0.7.0", Repos: repositories, RC: &rc}
-	promoteTags(&parms)
-
-	for i, repository := range repositories {
-		if got := strings.TrimSpace(gitTest(t, repository, "tag", "--list", "v0.7.0")); got != "v0.7.0" {
-			t.Fatalf("local tag missing in %s", repository)
-		}
-		if got := strings.TrimSpace(gitTest(t, base, "--git-dir", remotes[i], "tag", "--list", "v0.7.0")); got != "v0.7.0" {
-			t.Fatalf("remote tag missing in %s", remotes[i])
-		}
-	}
-}
-
-func TestPromotePushPublishesStableSibling(t *testing.T) {
-	base := t.TempDir()
-	devRoot := filepath.Join(base, "iasi-org-dev")
-	stableRoot := filepath.Join(base, "iasi-org")
-	devRepo := filepath.Join(devRoot, "repo-a")
-	stableRepo := filepath.Join(stableRoot, "repo-a")
-	remote := filepath.Join(base, "repo-a.git")
-
-	if err := os.MkdirAll(devRepo, 0755); err != nil {
-		t.Fatal(err)
-	}
-	gitTest(t, base, "init", "-b", "main", stableRepo)
-	gitTest(t, stableRepo, "config", "user.name", "IASI Test")
-	gitTest(t, stableRepo, "config", "user.email", "iasi@example.invalid")
-	if err := os.WriteFile(filepath.Join(stableRepo, "README.md"), []byte("stable\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	gitTest(t, stableRepo, "add", ".")
-	gitTest(t, stableRepo, "commit", "-m", "stable")
-	gitTest(t, base, "init", "--bare", remote)
-	gitTest(t, stableRepo, "remote", "add", "origin", remote)
 
 	rc := RC.OK
 	parms := structures.Parms{
 		Organization: "iasi-org-dev",
-		Push:         true,
-		Repos:        []string{devRepo},
+		Version:      "v0.5.0",
+		Local:        true,
+		Repos:        repositories,
 		Exclusions:   []string{".git", ".github", "tests"},
 		RC:           &rc,
 	}
 
-	repositories := Promote(&parms)
-	if len(repositories) != 1 || filepath.Clean(repositories[0]) != filepath.Clean(stableRepo) {
-		t.Fatalf("Promote(-p) = %v, want [%s]", repositories, stableRepo)
+	frozen := Freeze(&parms)
+	freezeRoot := filepath.Join(base, "iasi-org-v0.5.0")
+	if len(frozen) != 2 {
+		t.Fatalf("Freeze() returned %d repositories, want 2", len(frozen))
 	}
-	if got := strings.TrimSpace(gitTest(t, base, "--git-dir", remote, "rev-parse", "refs/heads/main")); got == "" {
-		t.Fatal("remote main was not pushed")
+	if _, err := os.Stat(filepath.Join(freezeRoot, freezeManifestName)); err != nil {
+		t.Fatalf("freeze manifest missing: %v", err)
+	}
+	for _, name := range []string{"repo-a", "repo-b"} {
+		frozenRepo := filepath.Join(freezeRoot, name)
+		if _, err := os.Stat(filepath.Join(frozenRepo, ".git")); err != nil {
+			t.Fatalf("frozen git history missing for %s: %v", name, err)
+		}
+		if got := strings.TrimSpace(gitTest(t, frozenRepo, "tag", "--list", "v0.5.0")); got != "v0.5.0" {
+			t.Fatalf("frozen tag missing in %s", name)
+		}
 	}
 }

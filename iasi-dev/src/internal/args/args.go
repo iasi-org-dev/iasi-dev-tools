@@ -32,7 +32,8 @@ func Parse(command string, values []string) structures.Parms {
 	validateCheckModes(&Parms)
 	validatePushMode(command, &Parms)
 	extractTargetVersion(command, &Parms)
-	extractVersionOrganization(command, &Parms)
+	extractVersionOperands(command, &Parms)
+	validateOrganizationWideCommand(command, &Parms)
 	extractMaterializeOperands(command, &Parms)
 	if Parms.RequestedTargets == nil {
 		Parms.RequestedTargets = append([]string{}, Parms.Targets...)
@@ -74,17 +75,65 @@ func extractTargetVersion(command string, Parms *structures.Parms) {
 	Parms.Targets = Parms.Targets[1:]
 }
 
-// extractVersionOrganization separates the optional organization operand from filesystem targets.
-func extractVersionOrganization(command string, Parms *structures.Parms) {
+// extractVersionOperands supports both querying and explicitly setting VERSION:
+//   version
+//   version iasi-org
+//   version v0.6.0
+//   version v0.6.0 iasi-org-dev
+func extractVersionOperands(command string, Parms *structures.Parms) {
 	if command != "version" || len(Parms.Targets) == 0 {
 		return
 	}
-	if len(Parms.Targets) > 1 {
-		cli.Error(RC.Error, *Parms, "version acepta como máximo una organización.")
+	if len(Parms.Targets) > 2 {
+		cli.Error(RC.Error, *Parms, "version acepta [vMAJOR.MINOR.PATCH] [organization].")
 	}
 
-	Parms.Organization = Parms.Targets[0]
+	first := Parms.Targets[0]
+	if looksLikeSemanticVersion(first) {
+		Parms.TargetVersion = first
+		if len(Parms.Targets) == 2 {
+			Parms.Organization = Parms.Targets[1]
+		}
+		Parms.Targets = nil
+		return
+	}
+
+	if len(Parms.Targets) > 1 {
+		cli.Error(RC.Error, *Parms, "Si se especifican dos operandos, el primero debe ser una versión vMAJOR.MINOR.PATCH.")
+	}
+	Parms.Organization = first
 	Parms.Targets = nil
+}
+
+func looksLikeSemanticVersion(value string) bool {
+	if !strings.HasPrefix(value, "v") {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(value, "v"), ".")
+	if len(parts) != 3 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" || (len(part) > 1 && part[0] == '0') {
+			return false
+		}
+		for _, char := range part {
+			if char < '0' || char > '9' {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func validateOrganizationWideCommand(command string, Parms *structures.Parms) {
+	organizationWide := command == "freeze" || command == "promote" || (command == "workflow" && Parms.Subcommand == "promote")
+	if !organizationWide || Parms.Push {
+		return
+	}
+	if len(Parms.Targets) != 0 {
+		cli.Error(RC.Error, *Parms, "%s opera sobre la organización completa y no acepta targets; usa --path para elegir el workspace.", command)
+	}
 }
 
 // extractMaterializeOperands separates materialize's destination from the optional source target.

@@ -3,13 +3,13 @@ package args
 import "testing"
 
 func TestPromoteExtractsTargetVersion(t *testing.T) {
-	Parms := Parse("promote", []string{"v0.6.0", "iasi-quarto"})
+	Parms := Parse("promote", []string{"v0.6.0"})
 
 	if Parms.TargetVersion != "v0.6.0" {
 		t.Fatalf("TargetVersion = %q, want v0.6.0", Parms.TargetVersion)
 	}
-	if len(Parms.Targets) != 1 || Parms.Targets[0] != "iasi-quarto" {
-		t.Fatalf("Targets = %v, want [iasi-quarto]", Parms.Targets)
+	if len(Parms.Targets) != 0 {
+		t.Fatalf("Targets = %v, want none", Parms.Targets)
 	}
 }
 
@@ -36,7 +36,7 @@ func TestRestoreWithoutVersionLeavesTargetVersionEmpty(t *testing.T) {
 }
 
 func TestPromoteWorkflowExtractsTargetVersion(t *testing.T) {
-	Parms := Parse("workflow", []string{"promote", "v0.7.0", "iasi-quarto"})
+	Parms := Parse("workflow", []string{"promote", "v0.7.0"})
 
 	if Parms.Subcommand != "promote" {
 		t.Fatalf("Subcommand = %q, want promote", Parms.Subcommand)
@@ -44,8 +44,8 @@ func TestPromoteWorkflowExtractsTargetVersion(t *testing.T) {
 	if Parms.TargetVersion != "v0.7.0" {
 		t.Fatalf("TargetVersion = %q, want v0.7.0", Parms.TargetVersion)
 	}
-	if len(Parms.Targets) != 1 || Parms.Targets[0] != "iasi-quarto" {
-		t.Fatalf("Targets = %v, want [iasi-quarto]", Parms.Targets)
+	if len(Parms.Targets) != 0 {
+		t.Fatalf("Targets = %v, want none", Parms.Targets)
 	}
 }
 
@@ -55,8 +55,30 @@ func TestVersionExtractsOrganization(t *testing.T) {
 	if Parms.Organization != "iasi-org" {
 		t.Fatalf("Organization = %q, want iasi-org", Parms.Organization)
 	}
-	if len(Parms.Targets) != 0 {
-		t.Fatalf("Targets = %v, want none", Parms.Targets)
+	if Parms.TargetVersion != "" {
+		t.Fatalf("TargetVersion = %q, want empty", Parms.TargetVersion)
+	}
+}
+
+func TestVersionExtractsExplicitNewVersion(t *testing.T) {
+	Parms := Parse("version", []string{"v0.6.0"})
+
+	if Parms.TargetVersion != "v0.6.0" {
+		t.Fatalf("TargetVersion = %q, want v0.6.0", Parms.TargetVersion)
+	}
+	if Parms.Organization != "" {
+		t.Fatalf("Organization = %q, want empty", Parms.Organization)
+	}
+}
+
+func TestVersionExtractsVersionAndOrganization(t *testing.T) {
+	Parms := Parse("version", []string{"v0.6.0", "iasi-org-dev"})
+
+	if Parms.TargetVersion != "v0.6.0" {
+		t.Fatalf("TargetVersion = %q, want v0.6.0", Parms.TargetVersion)
+	}
+	if Parms.Organization != "iasi-org-dev" {
+		t.Fatalf("Organization = %q, want iasi-org-dev", Parms.Organization)
 	}
 }
 
@@ -94,6 +116,13 @@ func TestWorkflowPromotePushOnlyHasNoTargetVersion(t *testing.T) {
 	if !Parms.Push {
 		t.Fatal("Push = false, want true")
 	}
+	if Parms.TargetVersion != "" {
+		t.Fatalf("TargetVersion = %q, want empty", Parms.TargetVersion)
+	}
+}
+
+func TestFreezeHasNoVersionOperand(t *testing.T) {
+	Parms := Parse("freeze", nil)
 	if Parms.TargetVersion != "" {
 		t.Fatalf("TargetVersion = %q, want empty", Parms.TargetVersion)
 	}
