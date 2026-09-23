@@ -13,4 +13,4 @@ La pregunta central de esta guía es:
 
 > **¿Cómo puedo modificar y hacer evolucionar `iasi-dev` sin romper su modelo?**
 
-`iasi-dev` ha dejado de ser una colección de scripts auxiliares. Es el CLI que coordina operaciones de desarrollo de IASI sobre proyectos, repositorios y organizaciones completas.
+`iasi-dev` ha dejado de ser una colección de scripts auxiliares. Es el CLI que coordina operaciones de desarrollo de IASI sobre proyectos, repositorios y organizaciones completas, incluido el ciclo explícito de versionado, congelación y promoción.

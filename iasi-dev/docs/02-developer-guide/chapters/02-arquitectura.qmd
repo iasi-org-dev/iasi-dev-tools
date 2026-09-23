@@ -7,13 +7,13 @@ La arquitectura actual puede leerse como una serie de capas sencillas:
 ```text
 CLI
  │
- ├─ argumentos y selección de proyectos
+ ├─ argumentos y selección
  ├─ preparación del entorno de ejecución
  │
  ├─ runners
  │    ├─ build / publish / release / commit
- │    ├─ promote / restore / materialize
- │    ├─ sync / version
+ │    ├─ version / freeze / promote / restore
+ │    ├─ materialize / sync
  │    └─ workflows
  │
  ├─ ejecución de comandos externos
@@ -28,15 +28,19 @@ CLI
 
 ### Entrada del programa
 
-La entrada del CLI decide el comando, crea el log, prepara la selección de repositorios y despacha al runner correspondiente. Debe mantenerse ligera: coordina, no implementa operaciones de negocio.
+La entrada del CLI decide el comando, crea el log, prepara la selección necesaria y despacha al runner correspondiente. Debe mantenerse ligera: coordina, no implementa operaciones de negocio.
 
 ### `internal/args`
 
 Contiene la interpretación de argumentos y el descubrimiento de repositorios. Es la frontera entre la sintaxis escrita por el usuario y el modelo interno de ejecución.
 
+También debe distinguir operandos con significado propio, como una versión o las rutas de origen y destino, de los targets normales de proyecto.
+
 ### `internal/runners`
 
 Contiene la semántica de las operaciones. Un runner sabe **qué significa** una operación y en qué orden debe realizar sus pasos.
+
+Los runners de organización deben ser especialmente cuidadosos con la atomicidad lógica. Antes de modificar varios repositorios conviene validar las precondiciones globales que puedan detectarse por adelantado.
 
 ### `internal/commands`
 
@@ -50,10 +54,42 @@ Centraliza la presentación de mensajes y evita que cada runner invente su propi
 
 Definen invariantes compartidos: códigos de retorno, exclusiones obligatorias y estructuras de datos que atraviesan la ejecución.
 
+## Dos familias de flujo
+
+### Flujo de proyecto
+
+```text
+selección de targets
+      ↓
+repositorio
+      ↓
+build / publish / release
+      ↓
+commit
+```
+
+### Flujo de organización
+
+```text
+organización DEV
+      ↓
+VERSION
+      ↓
+freeze
+      ↓
+versión etiquetada
+      ↓
+promote / materialize
+      ↓
+organización estable
+```
+
+No conviene mezclar ambas escalas accidentalmente. Un runner de proyecto no debe asumir que controla toda la organización, y un runner organizativo no debe trabajar con un subconjunto arbitrario como si fuera una fotografía completa.
+
 ## Regla práctica
 
 Antes de añadir código, conviene preguntarse:
 
-> ¿Estoy añadiendo sintaxis, semántica, ejecución externa o presentación?
+> ¿Estoy añadiendo sintaxis, semántica, ejecución externa, estado de organización o presentación?
 
-La respuesta suele indicar el paquete correcto.
+La respuesta suele indicar el paquete correcto y evita que el dispatcher termine convertido en una navaja suiza con veinte hojas abiertas.

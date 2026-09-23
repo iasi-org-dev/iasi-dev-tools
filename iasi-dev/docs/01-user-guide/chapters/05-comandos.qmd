@@ -5,15 +5,16 @@
 #| tbl-cap: "Comandos públicos de `iasi-dev`"
 
 commands = data.frame(
-  Comando = c("help", "build", "publish", "release", "commit", "version", "promote", "restore", "materialize", "workflow", "sync"),
+  Comando = c("help", "build", "publish", "release", "commit", "version", "freeze", "promote", "restore", "materialize", "workflow", "sync"),
   Finalidad = c(
     "Mostrar la ayuda.",
     "Construir proyectos IASI.",
     "Publicar proyectos IASI.",
     "Ejecutar la release definida por el proyecto.",
     "Crear commits y, salvo modo local, enviarlos al remoto.",
-    "Mostrar la versión registrada para una organización.",
-    "Promover una nueva versión común de una organización.",
+    "Mostrar o establecer explícitamente la versión de una organización.",
+    "Congelar la versión actual de la organización mediante tags publicados.",
+    "Promover una versión previamente congelada a una organización estable.",
     "Restaurar los repositorios a una versión o a main.",
     "Crear una copia limpia de una organización sin conservar su historia Git.",
     "Ejecutar una secuencia de operaciones.",
@@ -30,12 +31,18 @@ knitr::kable(commands, col.names = c("Comando", "Finalidad"), align = c("l", "l"
 iasi-dev build [proyectos...]
 ```
 
-Construye los proyectos seleccionados. La lógica específica de construcción se delega en `iasi.quarto`.
+Construye los proyectos seleccionados. La lógica específica de construcción se delega en el builder configurado para cada target.
 
 Puedes indicar uno o varios formatos:
 
 ```text
 iasi-dev build --format html,pdf iasi-book-I
+```
+
+Cuando el build lo soporta, también puedes limitar la plataforma:
+
+```text
+iasi-dev build --platform windows iasi-dev-tools
 ```
 
 ## `publish`
@@ -44,7 +51,7 @@ iasi-dev build --format html,pdf iasi-book-I
 iasi-dev publish [proyectos...]
 ```
 
-Publica los proyectos seleccionados mediante `iasi.quarto`.
+Publica los proyectos seleccionados mediante `iasi.quarto` cuando esa operación aplica al target.
 
 Cuando el proyecto lo soporta, `-f` fuerza la publicación:
 
@@ -58,7 +65,7 @@ iasi-dev publish -f iasi-book-I
 iasi-dev release [proyectos...]
 ```
 
-Ejecuta la operación de release definida por `iasi.quarto` para cada repositorio seleccionado.
+Ejecuta la operación de release definida por el proyecto para cada target seleccionado.
 
 ## `commit`
 
@@ -95,45 +102,110 @@ Si no existen cambios pendientes, el resultado es simplemente “nada que hacer�
 ## `version`
 
 ```text
-iasi-dev version [organización]
+iasi-dev version [vMAJOR.MINOR.PATCH] [organización]
 ```
 
-Muestra la versión registrada para la organización.
+Sin una nueva versión, muestra la `VERSION` registrada para la organización:
+
+```text
+iasi-dev version
+```
 
 ```text
 iasi-dev version iasi-org-dev
 ```
 
-Si no indicas una organización, `iasi-dev` intenta determinarla a partir de los repositorios con los que estás trabajando.
+Para establecer una nueva versión:
+
+```text
+iasi-dev version v0.5.2
+```
+
+También puedes indicar explícitamente la organización:
+
+```text
+iasi-dev version v0.5.2 iasi-org-dev
+```
+
+La selección de versión es siempre explícita. `iasi-dev` no incrementa automáticamente major, minor ni patch.
+
+La nueva versión debe ser superior a la versión actual.
+
+## `freeze`
+
+```text
+iasi-dev freeze
+```
+
+Congela la **versión actual** de la organización de desarrollo.
+
+`freeze` no crea una copia del workspace. La fotografía se representa mediante un tag Git de la `VERSION` actual en cada repositorio de la organización:
+
+```text
+HEAD de cada repositorio
+        ↓
+tag VERSION
+        ↓
+push origin VERSION
+```
+
+Antes de crear los tags, `iasi-dev` comprueba que:
+
+- la `VERSION` actual tiene formato `vMAJOR.MINOR.PATCH`;
+- la versión es superior a los tags de versión ya existentes;
+- los repositorios de la organización no tienen cambios sin commit.
+
+Los tags del freeze siempre se publican en `origin`. Por eso `freeze` no admite `-l`.
+
+Si la operación falla después de haber creado o publicado parte de los tags, `iasi-dev` intenta revertirlos para evitar un freeze incompleto.
 
 ## `promote`
 
 ```text
-iasi-dev promote vMAJOR.MINOR.PATCH [proyectos...]
+iasi-dev promote <versión> <origen> <destino> [-l]
 ```
 
-Promueve una nueva versión común de la organización.
+Promueve una versión **previamente congelada**.
 
-Antes de hacerlo, comprueba que:
-
-- la versión actual es válida;
-- la versión nueva tiene formato `vMAJOR.MINOR.PATCH`;
-- los repositorios están alineados en la misma versión;
-- la nueva versión es superior a la existente.
-
-Después crea el tag de versión en todos los repositorios y publica esos tags. Si una parte de la operación falla, intenta deshacer los tags ya creados para no dejar la organización a medias.
-
-Los tags forman parte siempre de `promote`. La opción `-l` no cambia esta parte.
-
-### Publicar solamente una organización ya preparada
+Ejemplo:
 
 ```text
-iasi-dev promote -p
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
 ```
 
-`-p` significa **push only**: no crea una versión, no crea tags y no materializa nada. Solo publica la organización local existente.
+Los tres datos son explícitos:
 
-No se puede combinar `-p` con `-l`, ni indicar una versión al utilizar `-p`.
+- `v0.5.1` identifica la versión congelada que se quiere promover;
+- `C:\iasi-org-dev` es el workspace de origen;
+- `C:\iasi-org` es el workspace estable de destino.
+
+Las rutas pueden ser absolutas o relativas al directorio de trabajo.
+
+`promote` no toma el contenido del `main` actual. Lee la versión desde los tags publicados de `origin`, crea un workspace temporal y materializa a partir de esa fotografía:
+
+```text
+origin / tag v0.5.1
+        ↓
+workspace temporal
+        ↓
+materialize
+        ↓
+organización estable
+```
+
+La organización destino queda además con:
+
+```text
+VERSION = v0.5.1
+```
+
+Si esa variable todavía no existe en la organización destino, `promote` la crea; si ya existe, la actualiza.
+
+Por defecto la organización estable se publica. Con `-l`, queda materializada únicamente en local:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org -l
+```
 
 ## `restore`
 
@@ -144,7 +216,7 @@ iasi-dev restore [vMAJOR.MINOR.PATCH] [proyectos...]
 Restaura todos los repositorios seleccionados a una versión común.
 
 ```text
-iasi-dev restore v1.2.0
+iasi-dev restore v0.5.1
 ```
 
 La versión debe existir como tag en todos los repositorios. Antes de cambiar nada, `iasi-dev` comprueba que el destino existe en todos ellos.
@@ -260,36 +332,39 @@ build → publish → release → commit
 ### `workflow promote`
 
 ```text
-iasi-dev workflow promote vMAJOR.MINOR.PATCH
+iasi-dev workflow promote --source <origen> --dest <destino> --version <siguiente-versión>
 ```
 
-Es el flujo completo de promoción de la organización de desarrollo:
+Los tres parámetros son obligatorios.
+
+Ejemplo, si `iasi-org-dev` está actualmente en `v0.5.1` y quieres continuar el desarrollo como `v0.5.2`:
 
 ```text
-promote
-   ↓
-materialize local
-   ↓
-push de la organización estable
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
 ```
 
-Si trabajas en una organización llamada `iasi-org-dev`, la organización estable se materializa como una carpeta hermana llamada `iasi-org`.
-
-Con `-l`:
+El workflow realiza:
 
 ```text
-iasi-dev workflow promote -l v1.2.0
+source VERSION = v0.5.1
+        ↓
+freeze v0.5.1
+        ↓
+version v0.5.2 en source
+        ↓
+promote v0.5.1 source → dest
+        ↓
+dest VERSION = v0.5.1
 ```
 
-se ejecutan la promoción y la materialización, pero la organización estable queda solo en local.
+Por tanto, `--version` **no es la versión que se promueve**. Es la siguiente versión de desarrollo que quedará activa en el origen después del freeze.
 
-Más adelante puedes publicarla sin repetir la promoción:
+La versión promovida es siempre la `VERSION` que tenía el origen al comenzar el workflow.
 
-```text
-iasi-dev workflow promote -p
-```
-
-`-p` ejecuta únicamente el `push` de la organización estable local que ya existe.
+Con `-l`, la promoción estable se materializa en local sin publicarse. El freeze sigue siendo un freeze real: sus tags se publican, y el origen avanza a la nueva versión indicada.
 
 ## `sync`
 

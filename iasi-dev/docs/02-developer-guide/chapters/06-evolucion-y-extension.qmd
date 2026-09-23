@@ -9,13 +9,14 @@ Antes de escribir código hay que decidir si estamos ante:
 3. una opción que modifica una operación existente;
 4. una capacidad interna reutilizable que no debe ser pública.
 
-`push` ilustra el cuarto caso: existe como primitive interna porque varios flujos pueden necesitarla, pero no es necesario exponer `iasi-dev push` como parte del lenguaje público.
+Una primitiva interna puede existir sin convertirse automáticamente en un verbo público. La API del CLI debe seguir siendo pequeña y semántica.
 
 ## Checklist de un comando nuevo
 
 Normalmente habrá que revisar:
 
 - sintaxis y validación de argumentos;
+- separación entre parámetros propios y targets;
 - campos compartidos que realmente sean necesarios;
 - runner;
 - dispatcher principal;
@@ -29,7 +30,25 @@ Normalmente habrá que revisar:
 
 Una opción debe modificar una intención existente sin convertir el comando en un acertijo.
 
-Ejemplo: `-p` no significa “además haz push”. En promoción significa **solo publicar lo ya preparado**. Esa semántica exclusiva evita repetir trabajo y permite separar preparación local de publicación.
+Dos reglas útiles del CLI actual:
+
+- los flags cortos de una letra (`-l`, `-a`, `-c`) son booleanos;
+- los parámetros que necesitan valor se expresan con nombre largo (`--source`, `--dest`, `--version`).
+
+En `workflow promote`, esos tres parámetros no son adornos sintácticos. Expresan tres conceptos diferentes que no conviene volver implícitos.
+
+## Mantener separadas las responsabilidades del ciclo de promoción
+
+Al evolucionar esta zona, preservar estas fronteras:
+
+```text
+version   → estado VERSION
+freeze    → fotografía inmutable
+promote   → materialización estable de una fotografía
+workflow  → orden y coordinación
+```
+
+Un cambio que haga que `promote` vuelva a etiquetar, que `freeze` avance la siguiente versión o que `version` deduzca automáticamente el patch estaría mezclando responsabilidades.
 
 ## Compatibilidad conceptual
 
@@ -37,9 +56,12 @@ No todo cambio compatible sintácticamente es compatible conceptualmente. Convie
 
 - el significado de cada verbo;
 - la escala repo/organización;
+- la separación entre versión congelada y siguiente versión de desarrollo;
+- la inmutabilidad de los freezes publicados;
 - la separación local/remoto;
 - la delegación a herramientas especializadas;
-- el comportamiento transaccional de operaciones multi-repositorio.
+- el comportamiento transaccional de operaciones multi-repositorio;
+- el carácter derivado y descartable de temporales de materialización/promoción.
 
 ## Evolución sin sobregeneralizar
 

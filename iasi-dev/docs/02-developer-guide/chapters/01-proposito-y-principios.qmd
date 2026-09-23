@@ -16,9 +16,11 @@ Los verbos públicos deben expresar operaciones reconocibles y mantener responsa
 - `publish` publica artefactos;
 - `commit` confirma cambios en Git;
 - `release` delega la liberación del artefacto;
-- `promote` establece una versión estable de la organización;
+- `version` consulta o establece explícitamente la versión de una organización;
+- `freeze` fija una versión de desarrollo mediante tags publicados;
+- `promote` materializa en estable una versión previamente congelada;
 - `materialize` crea una representación local independiente del historial Git;
-- `restore` lleva una organización a una versión etiquetada.
+- `restore` lleva repositorios a `main` o a una versión etiquetada.
 
 Cuando una operación necesita combinar varias acciones, la composición corresponde preferentemente a un **workflow**.
 
@@ -26,11 +28,31 @@ Cuando una operación necesita combinar varias acciones, la composición corresp
 
 Un workflow no debe reimplementar lo que ya sabe hacer un verbo. Debe orquestar operaciones existentes y añadir solo la lógica necesaria para encadenarlas.
 
-`workflow promote` es el ejemplo más claro: promoción, materialización local y publicación remota son conceptos distintos y se componen en ese orden.
+`workflow promote` es el ejemplo más claro: conserva las responsabilidades de `freeze`, `version` y `promote`, pero establece el orden que define el ciclo de promoción de una organización.
+
+### La versión promovida y la siguiente versión de desarrollo son cosas distintas
+
+El ciclo separa dos estados:
+
+```text
+versión actual de DEV
+        ↓
+      freeze
+        ↓
+siguiente versión de DEV
+
+versión congelada
+        ↓
+      promote
+        ↓
+versión estable de PROD
+```
+
+La versión que llega a estable es la que estaba activa **antes** de avanzar desarrollo.
 
 ### Organización y repositorio son escalas diferentes
 
-La mayoría de operaciones trabajan repositorio a repositorio. Otras, como `promote`, tienen sentido únicamente si se consideran todos los repositorios de la organización como un conjunto coherente.
+La mayoría de operaciones trabajan repositorio a repositorio. Otras, como `freeze`, `version`, `promote` y `workflow promote`, solo tienen sentido si se considera la organización como un conjunto coherente.
 
 Esta diferencia debe permanecer explícita en el diseño.
 
@@ -38,6 +60,12 @@ Esta diferencia debe permanecer explícita en el diseño.
 
 `iasi-dev` no intenta absorber todo el conocimiento de `iasi.quarto`, Git o GitHub. Cuando una herramienta especializada ya conoce cómo realizar una operación, `iasi-dev` coordina y delega.
 
-### Lo local y lo remoto deben poder separarse
+### Una versión congelada es inmutable
 
-Siempre que la operación lo permita, debe ser posible preparar un estado local y decidir después cuándo publicarlo. La pareja `-l` y `-p` en la promoción expresa precisamente esa separación.
+Una vez publicada mediante `freeze`, una versión no se corrige moviendo sus tags. Si hace falta incorporar cambios, se prepara una versión nueva.
+
+Esta regla permite que `promote` consuma una fotografía estable y reproducible en lugar del estado vivo de `main`.
+
+### Lo local y lo remoto deben separarse donde tenga sentido
+
+`-l` puede impedir la publicación de una organización materializada cuando la operación lo soporta. No convierte `freeze` en una operación local: congelar significa publicar los tags que identifican la fotografía común.

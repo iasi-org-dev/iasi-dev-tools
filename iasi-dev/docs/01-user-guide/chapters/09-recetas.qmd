@@ -15,9 +15,11 @@ recipes = data.frame(
     "Ejecutar build y commit",
     "Ejecutar build, publish y commit",
     "Consultar la versión de la organización",
-    "Promover una nueva versión",
-    "Promover y dejar la organización estable solo en local",
-    "Publicar después una promoción local",
+    "Establecer la siguiente versión de desarrollo",
+    "Congelar la versión actual",
+    "Promover una versión congelada",
+    "Promover una versión solo en local",
+    "Ejecutar el workflow completo de promoción",
     "Restaurar una versión",
     "Volver a main",
     "Materializar una organización localmente",
@@ -33,10 +35,12 @@ recipes = data.frame(
     "iasi-dev workflow build iasi-book-I",
     "iasi-dev workflow publish -a iasi-book-I",
     "iasi-dev version iasi-org-dev",
-    "iasi-dev promote v1.2.0",
-    "iasi-dev workflow promote -l v1.2.0",
-    "iasi-dev workflow promote -p",
-    "iasi-dev restore v1.2.0",
+    "iasi-dev version v0.5.2 iasi-org-dev",
+    "iasi-dev freeze",
+    "iasi-dev promote v0.5.1 C:\\iasi-org-dev C:\\iasi-org",
+    "iasi-dev promote v0.5.1 C:\\iasi-org-dev C:\\iasi-org -l",
+    "iasi-dev workflow promote --source C:\\iasi-org-dev --dest C:\\iasi-org --version v0.5.2",
+    "iasi-dev restore v0.5.1",
     "iasi-dev restore",
     "iasi-dev materialize -l C:\\iasi-org C:\\iasi-org-dev",
     "iasi-dev sync .gitattributes"
@@ -46,23 +50,55 @@ recipes = data.frame(
 knitr::kable(recipes, col.names = c("Objetivo", "Comando"), align = c("l", "l"))
 ```
 
-## Promover ahora y publicar después
+## Ciclo manual de una promoción
 
-Este flujo resulta útil cuando quieres revisar la organización estable antes de subirla:
+Supongamos que la organización de desarrollo está en `v0.5.1`.
 
-```text
-iasi-dev workflow promote -l v1.2.0
-```
-
-La promoción crea y publica sus tags y materializa la organización estable en local, pero no publica esa organización.
-
-Puedes revisarla y, cuando quieras subirla:
+Primero se congela esa versión:
 
 ```text
-iasi-dev workflow promote -p
+iasi-dev freeze
 ```
 
-No se repite ni la promoción ni la materialización.
+Después se establece explícitamente la siguiente versión de desarrollo:
+
+```text
+iasi-dev version v0.5.2
+```
+
+Y se promueve la versión que acabamos de congelar:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+El resultado conceptual es:
+
+```text
+iasi-org-dev VERSION = v0.5.2
+iasi-org     VERSION = v0.5.1
+```
+
+## El mismo ciclo mediante `workflow promote`
+
+El workflow reúne las tres operaciones anteriores:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+Si `source` estaba en `v0.5.1`, ejecuta:
+
+```text
+freeze v0.5.1
+      ↓
+version v0.5.2 en source
+      ↓
+promote v0.5.1 a dest
+```
 
 ## Workflow completo de release
 

@@ -68,7 +68,7 @@ iasi-dev build --exclude exclusions.txt .
 
 ## Comandos con argumentos especiales
 
-No todos los comandos interpretan sus argumentos finales de la misma forma.
+No todos los comandos interpretan sus argumentos finales como targets.
 
 `sync` recibe nombres o rutas de recursos compartidos:
 
@@ -82,18 +82,38 @@ iasi-dev sync .gitattributes
 iasi-dev materialize C:\iasi-org C:\iasi-org-dev
 ```
 
-`version` puede recibir el nombre de una organización:
+`version` puede consultar o establecer la versión de una organización:
 
 ```text
 iasi-dev version iasi-org
 ```
 
-`promote` y `restore` pueden recibir una versión:
-
 ```text
-iasi-dev promote v1.2.0
+iasi-dev version v0.5.2 iasi-org-dev
 ```
 
+`freeze` es una operación de organización completa. No recibe una lista de targets:
+
 ```text
-iasi-dev restore v1.2.0
+iasi-dev freeze
 ```
+
+`promote` recibe la versión congelada y dos rutas explícitas, origen y destino:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+`restore` puede recibir una versión:
+
+```text
+iasi-dev restore v0.5.1
+```
+
+El workflow de promoción utiliza parámetros nombrados y obligatorios:
+
+```text
+iasi-dev workflow promote --source C:\iasi-org-dev --dest C:\iasi-org --version v0.5.2
+```
+
+En este workflow, `--version` significa **la siguiente versión de desarrollo**. La versión promovida es la `VERSION` actual del origen antes de iniciar el workflow.

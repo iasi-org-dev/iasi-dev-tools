@@ -7,23 +7,29 @@ No todas las opciones tienen sentido para todos los comandos. La tabla siguiente
 #| tbl-cap: "Opciones de `iasi-dev`"
 
 options = data.frame(
-  Opcion = c("-s", "-v", "-V", "-d", "-t", "-f", "-l", "-p", "-a", "-c", "-i", "--path", "--exclude", "--format", "--message"),
+  Opcion = c("-s", "-v", "-V", "-d", "-m", "-M", "-t", "-f", "-l", "-a", "-c", "-i", "--path", "--log", "--exclude", "--format", "--platform", "--message", "--source", "--dest", "--version"),
   Significado = c(
     "Reducir la salida mostrada en consola.",
     "Aumentar el nivel de información.",
     "Mostrar el máximo nivel de detalle.",
     "Mostrar información de diagnóstico.",
+    "Mostrar la ejecución preparada y detenerse antes de ejecutarla.",
+    "Dry-run: mostrar también los comandos externos sin ejecutarlos.",
     "Continuar con otros proyectos cuando un error pueda tolerarse.",
     "Forzar la operación cuando el comando lo soporte.",
-    "Mantener local la parte que normalmente se publicaría.",
-    "En promote, publicar solamente lo ya preparado localmente.",
+    "Mantener local la parte que normalmente se publicaría, cuando el comando lo soporte.",
     "En workflows, ejecutar también las etapas anteriores.",
     "En workflows, crear commits también en etapas intermedias.",
     "Solicitar instalación cuando la operación lo soporte.",
     "Trabajar desde otra carpeta.",
+    "Indicar el directorio de logs.",
     "Excluir nombres durante la búsqueda de repositorios.",
     "Indicar uno o varios formatos para build.",
-    "Indicar el mensaje de commit."
+    "Limitar el build a una plataforma.",
+    "Indicar el mensaje de commit.",
+    "Indicar el workspace de origen en workflow promote.",
+    "Indicar el workspace estable de destino en workflow promote.",
+    "Indicar la siguiente versión de desarrollo en workflow promote."
   )
 )
 
@@ -50,25 +56,35 @@ iasi-dev materialize -l C:\iasi-org
 
 la organización se crea en local pero no se publica.
 
-Y en:
+Y en una promoción:
 
 ```text
-iasi-dev workflow promote -l v1.2.0
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org -l
 ```
 
-los tags de promoción se crean y publican normalmente, se materializa la organización estable en local y se detiene antes de publicar esa organización estable.
+la organización estable se materializa pero no se publica.
 
-## `-p`: push only
+`freeze` es la excepción importante: **no admite `-l`**. Congelar una versión implica publicar sus tags en `origin`.
 
-`-p` solo está pensado para `promote` y `workflow promote`.
+En `workflow promote -l`, el freeze y el cambio de versión del origen se realizan normalmente; lo que se mantiene local es la organización estable resultante.
+
+## `-m`: mostrar la ejecución preparada
 
 ```text
-iasi-dev workflow promote -p
+iasi-dev build -m
 ```
 
-significa: **no vuelvas a promover ni a materializar; publica lo que ya está preparado en local**.
+Muestra cómo ha quedado resuelta la ejecución y se detiene antes de lanzar la operación.
 
-`-p` y `-l` son incompatibles.
+Es útil para comprobar selección de targets, parámetros y contexto.
+
+## `-M`: dry-run
+
+```text
+iasi-dev build -M
+```
+
+Además de preparar la ejecución, muestra los comandos externos que se lanzarían sin ejecutarlos.
 
 ## `-a`: incluir etapas anteriores
 
@@ -124,6 +140,14 @@ Permite trabajar desde otra carpeta:
 iasi-dev build --path C:\iasi-org-dev
 ```
 
+## `--log`
+
+Permite elegir el directorio en el que se escriben los logs:
+
+```text
+iasi-dev build --log C:\logs\iasi
+```
+
 ## `--exclude`
 
 Acepta nombres separados por comas:
@@ -146,6 +170,16 @@ Se utiliza con `build`:
 iasi-dev build --format html,pdf
 ```
 
+## `--platform`
+
+Limita el build a una plataforma cuando el builder lo soporta:
+
+```text
+iasi-dev build --platform windows
+```
+
+Los valores previstos son `windows` y `linux`.
+
 ## `--message`
 
 Indica el mensaje de commit:
@@ -153,3 +187,20 @@ Indica el mensaje de commit:
 ```text
 iasi-dev commit --message "Actualización del manual"
 ```
+
+## `--source`, `--dest` y `--version`
+
+Son los tres parámetros obligatorios de `workflow promote`:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+`--source` identifica el workspace de desarrollo.
+
+`--dest` identifica el workspace de la organización estable.
+
+`--version` indica la **siguiente versión de desarrollo** que quedará activa en `source`. No indica la versión que se promueve: esa es la `VERSION` actual del origen al comenzar el workflow.

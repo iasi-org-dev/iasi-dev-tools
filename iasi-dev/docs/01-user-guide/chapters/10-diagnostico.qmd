@@ -45,11 +45,11 @@ Comprueba:
 gh auth status
 ```
 
-Si `iasi-dev version` no puede leer la versión de la organización, revisa primero la autenticación y el nombre de la organización.
+Si `iasi-dev version` no puede leer o actualizar la versión de la organización, revisa primero la autenticación y el nombre de la organización.
 
-## `promote` rechaza la versión
+## `version` rechaza la nueva versión
 
-Las versiones de promoción deben tener este formato:
+Las versiones deben tener este formato:
 
 ```text
 vMAJOR.MINOR.PATCH
@@ -58,12 +58,65 @@ vMAJOR.MINOR.PATCH
 Por ejemplo:
 
 ```text
-v1.2.0
+v0.5.2
 ```
 
-La nueva versión debe ser superior a la versión más alta existente.
+La nueva versión debe ser superior a la actual. `iasi-dev` no calcula automáticamente cuál debería ser la siguiente.
 
-`promote` también exige que todos los repositorios seleccionados estén alineados antes de iniciar la promoción.
+## `freeze` no puede congelar la organización
+
+`freeze` trabaja sobre la `VERSION` actual de la organización completa.
+
+Comprueba que:
+
+- la `VERSION` actual es válida;
+- es superior a los tags de versión existentes;
+- todos los repositorios están limpios, sin cambios pendientes de commit;
+- el tag todavía no existe en `origin`.
+
+`freeze` siempre publica los tags. No existe un freeze únicamente local.
+
+## `promote` no encuentra la versión
+
+`promote` solo acepta una versión que ya haya sido congelada.
+
+Antes de materializar nada, comprueba que el tag indicado está publicado en `origin` para todos los repositorios del workspace de origen.
+
+Puedes revisar un repositorio con:
+
+```text
+git ls-remote --tags origin
+```
+
+Recuerda además que `promote` recibe explícitamente versión, origen y destino:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+## `workflow promote` parece promover la versión equivocada
+
+En este comando:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+`--version v0.5.2` significa **siguiente versión de desarrollo**.
+
+Si `source` estaba en `v0.5.1`, la versión promovida será `v0.5.1` y el origen quedará en `v0.5.2`.
+
+```text
+antes:   source v0.5.1
+freeze:  v0.5.1
+source:  v0.5.2
+promote: v0.5.1 → dest
+```
+
+Los parámetros `--source`, `--dest` y `--version` son obligatorios. No se utiliza el antiguo contrato posicional del workflow.
 
 ## `restore` no encuentra la versión
 
@@ -82,24 +135,6 @@ git tag --list
 Si el directorio destino no existe, `iasi-dev` pide confirmación antes de crearlo.
 
 Si existe pero no es un directorio, la operación falla.
-
-## `workflow promote -p` no encuentra nada que publicar
-
-`-p` no crea la organización estable. Solo publica una que ya haya sido materializada anteriormente.
-
-El flujo habitual es:
-
-```text
-iasi-dev workflow promote -l v1.2.0
-```
-
-seguido más tarde por:
-
-```text
-iasi-dev workflow promote -p
-```
-
-Si la carpeta estable local se ha eliminado o movido, `-p` no podrá publicarla.
 
 ## Una operación falla a mitad de varios proyectos
 

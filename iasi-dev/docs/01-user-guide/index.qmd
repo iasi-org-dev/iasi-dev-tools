@@ -7,7 +7,7 @@ subtitle: "Guía de usuario"
 
 `iasi-dev` es la herramienta de línea de comandos utilizada para realizar las operaciones habituales de desarrollo del proyecto IASI.
 
-Existe **por y para IASI**. Conoce sus proyectos, sus artefactos, sus convenciones y la forma en que se realizan operaciones como construcción, publicación, commit, release, sincronización y procesamiento de múltiples targets.
+Existe **por y para IASI**. Conoce sus proyectos, sus artefactos, sus convenciones y la forma en que se realizan operaciones como construcción, publicación, commit, release, versionado, freeze, promoción, sincronización y procesamiento de múltiples targets.
 
 A medida que IASI crece, también crece el número de tareas que deben ejecutarse de forma sistemática sobre sus distintos componentes. `iasi-dev` proporciona una interfaz común para realizar ese trabajo.
 

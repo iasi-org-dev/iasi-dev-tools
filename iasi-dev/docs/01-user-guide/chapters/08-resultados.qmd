@@ -57,8 +57,12 @@ El hecho de continuar no convierte el error anterior en éxito. El resultado fin
 
 ## Operaciones coordinadas
 
-Comandos como `promote` y `restore` intentan evitar estados parciales.
+Las operaciones de organización intentan evitar estados parciales.
 
-Antes de modificar varios repositorios realizan comprobaciones previas y, cuando una operación falla a mitad del proceso, intentan deshacer los cambios ya efectuados.
+`freeze`, por ejemplo, crea y publica el mismo tag de versión en todos los repositorios. Si falla a mitad del proceso, intenta retirar los tags que ya hubiera creado o publicado.
 
-Esto reduce el riesgo de dejar una organización con repositorios en estados incompatibles.
+`promote` valida primero que la versión congelada exista como tag publicado en todos los repositorios del origen antes de materializar la organización estable.
+
+`restore` comprueba también el destino antes de modificar varios repositorios.
+
+Estas comprobaciones reducen el riesgo de dejar una organización con repositorios en estados incompatibles.

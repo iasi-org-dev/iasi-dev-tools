@@ -1,6 +1,6 @@
 # Por qué existe `iasi-dev`
 
-IASI está formado por varios repositorios y proyectos. Muchas operaciones de desarrollo se repiten sobre más de uno: construir documentación, publicar, crear commits, preparar una release, sincronizar recursos compartidos o promover una versión estable.
+IASI está formado por varios repositorios y proyectos. Muchas operaciones de desarrollo se repiten sobre más de uno: construir documentación, publicar, crear commits, preparar una release, sincronizar recursos compartidos, congelar una versión o promoverla a una organización estable.
 
 Sin una herramienta común, el trabajo acabaría siendo una sucesión de pasos manuales:
 
@@ -42,9 +42,25 @@ También puedes indicar una carpeta que contenga varios repositorios. `iasi-dev`
 
 La mayoría de los comandos actúan repositorio a repositorio. Por ejemplo, `build`, `publish`, `release` o `commit`.
 
-Otras operaciones afectan al conjunto de la organización. `promote`, por ejemplo, comprueba que los repositorios están alineados antes de promover una nueva versión común.
+Otras operaciones afectan al conjunto de la organización. Entre ellas están `version`, `freeze`, `promote` y el workflow de promoción.
 
-Esta diferencia es importante porque una promoción no debe dejar media organización en una versión y la otra media en otra.
+El ciclo de una versión estable se apoya en tres ideas distintas:
+
+```text
+VERSION actual
+    ↓
+freeze
+    ↓
+tag publicado en todos los repositorios
+    ↓
+promote
+    ↓
+organización estable
+```
+
+`freeze` fija una fotografía inmutable de la versión actual mediante tags Git publicados. `promote` trabaja sobre esa fotografía, no sobre el estado vivo de desarrollo.
+
+Esta diferencia es importante porque una promoción no debe mezclar repositorios tomados de momentos distintos.
 
 ## Una herramienta que evoluciona con IASI
 

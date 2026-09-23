@@ -27,34 +27,70 @@ Con checkpoints, los commits pueden producirse también entre etapas.
 
 ## Workflow de promoción
 
-`workflow promote` es diferente porque la promoción es una propiedad de la organización completa.
+`workflow promote` es diferente porque trabaja con el ciclo completo de una organización de desarrollo.
+
+El contrato es explícito:
 
 ```text
-workflow promote vX.Y.Z
-    │
-    ├─ promote
-    ├─ materialize local
-    └─ push
+workflow promote
+  --source <workspace DEV>
+  --dest <workspace estable>
+  --version <siguiente versión DEV>
 ```
 
-Con `-l`:
+El workflow debe distinguir dos versiones desde el principio:
 
 ```text
-workflow promote -l vX.Y.Z
-    │
-    ├─ promote
-    └─ materialize local
+frozenVersion = VERSION(source) al comenzar
+nextVersion   = --version
 ```
 
-Y posteriormente:
+Y orquestar exactamente:
 
 ```text
-workflow promote -p
-    └─ push del estado estable local existente
+freeze frozenVersion
+        ↓
+version nextVersion en source
+        ↓
+promote frozenVersion source → dest
+        ↓
+VERSION(dest) = frozenVersion
 ```
 
-El modo `-p` es **push-only**. No repite promoción, tags ni materialización.
+La opción `--version` **no identifica la versión promovida**. Identifica la versión con la que continuará desarrollo después de congelar la actual.
+
+Esta distinción debe permanecer visible en nombres de variables, mensajes, tests y documentación. Llamar a ambas simplemente `version` dentro del workflow invita a errores muy poco divertidos.
+
+## `-l` en el workflow de promoción
+
+`-l` afecta a la publicación del resultado estable. No cambia la semántica de los pasos anteriores:
+
+- `freeze` sigue publicando los tags;
+- `version` sigue avanzando `VERSION` en `source`;
+- `promote` materializa `dest` pero no lo publica.
+
+Por tanto, `workflow promote -l` no es un dry-run ni una promoción completamente local.
+
+## Fases internas de promoción
+
+Cuando `promote` necesita tratamiento específico después de la materialización principal, ese trabajo debe vivir en una fase de **Postprocess** y no mezclarse con el núcleo de copia/materialización.
+
+La separación conceptual es:
+
+```text
+Initialize
+    ↓
+Prepare
+    ↓
+Deploy
+    ↓
+Postprocess
+```
+
+`Postprocess` es el lugar para remates propios de la organización estable, como ajustes de nombres, referencias o contenidos que solo tienen sentido una vez desplegada la fotografía principal.
 
 ## Regla de diseño
 
 Si un nuevo workflow empieza a duplicar grandes fragmentos de runners existentes, probablemente está absorbiendo responsabilidades que no le corresponden.
+
+El workflow decide **cuándo** se ejecutan los verbos. Los runners siguen decidiendo **qué significa** cada verbo.

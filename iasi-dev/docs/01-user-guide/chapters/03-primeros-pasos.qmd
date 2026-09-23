@@ -83,4 +83,14 @@ Si quieres consultar una organización concreta:
 iasi-dev version iasi-org-dev
 ```
 
+## Establecer explícitamente la siguiente versión
+
+`iasi-dev` no incrementa versiones automáticamente. La nueva versión se indica de forma explícita:
+
+```text
+iasi-dev version v0.5.2
+```
+
+La versión nueva debe ser superior a la actual.
+
 Las operaciones que acceden a GitHub requieren que la CLI `gh` esté instalada y autenticada.

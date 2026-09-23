@@ -15,19 +15,83 @@ Los tests de `iasi-dev` deben concentrarse especialmente en decisiones que podr�
 - códigos de retorno;
 - visibilidad de mensajes.
 
-## Tests pequeños y deterministas
+## Versionado y freeze
 
-Las funciones puras o casi puras son especialmente valiosas para comprobar reglas como:
+Las reglas de versión merecen tests pequeños y deterministas:
 
-- `v1.2.3` es una versión válida;
-- el destino estable de `iasi-org-dev` es `iasi-org`;
-- `restore` a una versión usa detached HEAD;
+- `v1.2.3` es válida;
+- una nueva `VERSION` debe ser superior a la actual;
+- `freeze` usa exactamente la `VERSION` actual;
+- `freeze` rechaza una versión que no supera los tags de versión existentes;
+- todos los repositorios reciben el mismo tag;
+- el tag apunta al `HEAD` correspondiente;
+- el tag se publica en `origin`;
+- un fallo parcial activa el rollback de los tags ya creados/publicados.
+
+## Promote
+
+La prueba esencial de `promote` es demostrar que **no depende del `main` vivo**.
+
+Un patrón de integración útil es:
+
+```text
+commit A
+  ↓
+freeze vX.Y.Z
+  ↓
+commit B en main
+  ↓
+promote vX.Y.Z
+  ↓
+dest debe contener A, no B
+```
+
+También conviene comprobar:
+
+- que la versión existe como tag publicado en todos los repositorios antes de materializar;
+- que source y dest se mantienen separados;
+- que el temporal se elimina;
+- que los postprocesos se ejecutan después del despliegue principal;
+- que `VERSION(dest)` queda igual a la versión promovida;
+- que la variable se crea si no existía y se actualiza si ya existía;
+- que `-l` evita el push del destino sin convertir el freeze en local.
+
+## Workflow promote
+
+Debe probarse como orquestación, no como una implementación paralela de sus verbos.
+
+Caso mínimo:
+
+```text
+VERSION(source) = v0.5.1
+--version        = v0.5.2
+```
+
+Resultado esperado:
+
+```text
+freeze           → v0.5.1
+VERSION(source)  → v0.5.2
+promote          → v0.5.1
+VERSION(dest)    → v0.5.1
+```
+
+Este test protege el error más peligroso del workflow: promover accidentalmente la siguiente versión de desarrollo.
+
+## Restore y materialize
+
+También deben conservarse pruebas para reglas como:
+
+- `restore` a una versión usa el tag solicitado;
+- una restauración multi-repositorio valida antes de modificar cuando sea posible;
 - el temporal de materialización es hermano del destino;
-- `-p` no admite versión ni targets.
+- el destino solo se sustituye cuando el temporal está preparado.
 
 ## Procesos externos
 
-Siempre que sea posible conviene separar la decisión de **qué comando ejecutar** de la ejecución física. Esto permite probar la semántica sin depender de una organización real de GitHub o de modificar repositorios durante el test.
+Siempre que sea posible conviene separar la decisión de **qué comando ejecutar** de la ejecución física. Esto permite probar semántica sin depender de una organización real de GitHub.
+
+Cuando la característica depende precisamente de Git remoto, tags publicados o variables de organización, hacen falta además pruebas de integración controladas con repositorios temporales o entornos de prueba.
 
 ## Prueba mínima antes de integrar
 
@@ -36,4 +100,4 @@ go test ./...
 go build ./...
 ```
 
-Son el suelo, no el techo. Los cambios que afecten a workflows o repositorios reales merecen además pruebas de integración controladas.
+Son el suelo, no el techo. Los cambios que afecten a workflows o repositorios reales merecen además una prueba de fuego sobre una versión desechable antes de utilizarlos para una promoción real.

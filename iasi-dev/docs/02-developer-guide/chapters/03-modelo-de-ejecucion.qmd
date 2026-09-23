@@ -7,9 +7,9 @@ Una ejecución típica sigue este recorrido conceptual:
 ```text
 argumentos
    ↓
-selección de proyectos/repositorios
+selección y resolución del contexto
    ↓
-identificación de la organización
+identificación de repositorios / organización
    ↓
 preparación de log y opciones
    ↓
@@ -28,11 +28,66 @@ Los argumentos posicionales no representan necesariamente un único repositorio.
 
 Si la ruta indicada está dentro de un repositorio, se selecciona ese repositorio. Si no, se recorren sus subdirectorios buscando repositorios, respetando exclusiones.
 
-## Organización
+Los comandos de organización son una excepción conceptual: deben operar sobre el conjunto completo que representa esa organización, no sobre una colección accidental de targets.
 
-Cuando una operación necesita conocer la organización, `iasi-dev` la deduce a partir de los remotos `origin` de los repositorios seleccionados. Todos deben apuntar a la misma organización.
+## VERSION de organización
 
-La variable de organización `VERSION` proporciona la versión estable conocida. El modo `-p` es una excepción deliberada: publicar un estado local ya preparado no debe requerir consultar previamente una organización remota que quizá todavía no exista.
+`VERSION` es estado de organización, no un dato derivado del último tag ni una versión calculada automáticamente.
+
+`version` tiene dos comportamientos deliberadamente simples:
+
+```text
+sin nueva versión  → consultar VERSION
+con nueva versión  → establecer explícitamente VERSION
+```
+
+Cuando se establece una nueva versión debe ser semánticamente válida y superior a la actual. El CLI no decide por el usuario si toca incrementar major, minor o patch.
+
+## Freeze como fotografía
+
+`freeze` convierte la `VERSION` actual de DEV en una referencia reproducible:
+
+```text
+HEAD repo A ─┐
+HEAD repo B ─┼─ tag VERSION ─ push origin
+HEAD repo C ─┘
+```
+
+No se crea un workspace persistente de freeze. La fotografía está representada por los tags publicados de todos los repositorios.
+
+Antes de empezar, deben validarse las precondiciones globales: versión válida, ausencia de cambios sin commit y compatibilidad con los tags de versión existentes.
+
+Si el proceso falla después de haber creado o publicado parte de los tags, el runner intenta retirar lo creado para no dejar una congelación parcial.
+
+## Promote como consumo de la fotografía
+
+`promote` no lee el `main` actual de DEV. Recibe explícitamente:
+
+```text
+versión congelada + source + dest
+```
+
+y reconstruye la organización estable a partir de los tags publicados de esa versión.
+
+Conceptualmente:
+
+```text
+origin / tag vX.Y.Z
+        ↓
+clones temporales
+        ↓
+materialización
+        ↓
+postproceso específico
+        ↓
+dest estable
+        ↓
+VERSION(dest) = vX.Y.Z
+        ↓
+push, salvo -l
+```
+
+El workspace temporal es derivado y descartable. No es fuente de verdad.
 
 ## Estado compartido durante una ejecución
 
@@ -40,4 +95,6 @@ Los runners comparten opciones, repositorios activos, resultado acumulado, log y
 
 ## Operaciones parciales
 
-Cuando una operación sobre un repositorio deja de ser aplicable, ese repositorio puede quedar fuera de las siguientes etapas del workflow. Esto permite que una ejecución sobre varios repositorios siga teniendo una semántica coherente sin forzar a todos a recorrer exactamente el mismo camino.
+En workflows por repositorio, una operación que deja de ser aplicable puede retirar ese repositorio de las siguientes etapas.
+
+En operaciones de organización el criterio es diferente: si falta una condición que compromete la fotografía global, la operación debe fallar como operación de organización y no continuar con una versión parcial.

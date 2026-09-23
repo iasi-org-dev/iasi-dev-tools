@@ -18,20 +18,55 @@ No debe convertirse en un workflow encubierto. Construir o publicar antes de con
 
 ## `version`
 
-`version` expone de forma directa la versión de la organización. Es deliberadamente pequeño.
+`version` consulta o modifica explícitamente la variable `VERSION` de una organización.
+
+No congela, no crea tags, no promueve y no incrementa automáticamente la versión. Su responsabilidad es el estado de versionado de la organización.
+
+## `freeze`
+
+`freeze` opera a escala de organización y fija la `VERSION` actual mediante tags Git publicados en todos los repositorios.
+
+Responsabilidades:
+
+- validar que la versión actual es válida;
+- comprobar que la organización puede congelarse como conjunto;
+- exigir worktrees limpios;
+- crear el mismo tag anotado sobre el `HEAD` de cada repositorio;
+- publicar los tags;
+- intentar rollback de tags creados si la operación queda incompleta.
+
+No materializa una copia de la organización y no admite un freeze únicamente local.
 
 ## `promote`
 
-`promote` opera a escala de organización. Su responsabilidad conceptual es validar una nueva versión estable y etiquetar de forma coherente todos los repositorios.
+`promote` opera también a escala de organización, pero **no crea la versión congelada**. Consume una versión que ya debe existir como tag publicado en todos los repositorios del origen.
 
-El modo `-p` cambia la operación: no promociona ni etiqueta; publica únicamente el estado local existente.
+Recibe explícitamente:
+
+```text
+promote <versión> <source> <dest>
+```
+
+Sus responsabilidades son:
+
+1. validar la presencia de la versión congelada en el origen;
+2. leer cada repositorio desde su tag publicado;
+3. construir un workspace temporal;
+4. materializar la organización estable;
+5. ejecutar los postprocesos específicos de promoción;
+6. establecer `VERSION` de la organización destino a la versión promovida, creándola si todavía no existe;
+7. publicar el destino, salvo `-l`.
+
+La separación es importante: **freeze decide qué fotografía existe; promote decide qué fotografía llega a estable**.
 
 ## `restore`
 
-`restore` es la operación inversa desde el punto de vista de navegación histórica: lleva todos los repositorios a `main` o a una versión etiquetada, preservando información suficiente para intentar rollback si la operación falla a mitad.
+`restore` navega por la historia Git: lleva los repositorios seleccionados a `main` o a una versión etiquetada, preservando información suficiente para intentar rollback si la operación falla a mitad.
+
+No debe confundirse con `promote`. `restore` cambia el estado de repositorios existentes; `promote` materializa una organización estable desde una fotografía congelada.
 
 ## `materialize`
 
-`materialize` genera una organización local nueva a partir de otra sin conservar el historial Git. Copia a un temporal, inicializa Git, ajusta remotos y sustituye el destino solo cuando la materialización está preparada.
+`materialize` genera una organización local nueva a partir de otra sin conservar el historial Git anterior. Copia a un temporal, inicializa Git, ajusta remotos y sustituye el destino solo cuando la materialización está preparada.
 
 La materialización y la publicación son conceptos distintos, aunque el comando público pueda encadenarlos cuando no se solicita `-l`.

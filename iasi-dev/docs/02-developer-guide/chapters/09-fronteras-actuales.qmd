@@ -1,20 +1,39 @@
 # Fronteras actuales y evolución prevista
 
-## Operaciones todavía en modo de previsualización
+## El freeze no es un workspace
 
-En el estado actual de desarrollo, algunas operaciones sensibles están deliberadamente desacopladas de su ejecución destructiva completa.
+Una versión congelada se representa mediante tags Git publicados. No debe reaparecer una segunda fuente de verdad en forma de carpeta persistente, manifest local o copia “oficial” de la organización.
 
-La lógica de `promote`, `restore`, `materialize` y el `push` de organización ya expresa el flujo deseado, pero determinadas acciones Git o de filesystem se previsualizan antes de convertirlas en mutaciones reales.
+Los temporales usados durante promoción son artefactos de ejecución y deben poder eliminarse y reconstruirse.
 
-Esta frontera es intencionada: permite estabilizar la semántica y los rollbacks antes de dar capacidad destructiva al CLI.
+## VERSION es estado explícito
 
-## VERSION de organización
+La versión de una organización vive en su variable `VERSION`.
 
-La versión actual se obtiene de la variable `VERSION` de la organización GitHub. La actualización de esa variable después de una promoción completa sigue siendo una pieza a cerrar en la transacción final.
+El modelo deliberadamente evita dos automatismos:
+
+- no se deduce `VERSION` a partir del último tag;
+- no se calcula automáticamente la siguiente versión.
+
+La decisión de avanzar a `vX.Y.Z` pertenece al usuario o al workflow que ha recibido esa versión explícitamente.
+
+## La organización destino también tiene VERSION
+
+Una promoción completa debe dejar la organización estable identificada con la versión que acaba de recibir.
+
+Por eso `promote` no solo materializa repositorios: también crea o actualiza `VERSION` en destino.
+
+Esta actualización pertenece a `promote`, porque forma parte del estado observable de la organización resultante.
+
+## Postprocess
+
+Hay transformaciones que no pertenecen a la copia principal de una promoción y solo tienen sentido una vez materializada la organización estable.
+
+Deben mantenerse en una fase `Postprocess` separada. Así el núcleo de la promoción sigue siendo genérico y los casos especiales quedan localizados.
 
 ## Materialización
 
-El diseño ya establece la transacción deseada:
+El diseño conserva la transacción local:
 
 ```text
 origen
@@ -23,10 +42,18 @@ temporal
   ↓
 git init + remotes
   ↓
+preparación completa
+  ↓
 sustitución del destino
 ```
 
 La sustitución del destino debe seguir siendo el último paso local, de modo que un fallo previo no deje una organización estable a medio construir.
+
+## Organización completa frente a selección parcial
+
+`freeze` y `promote` representan estados de organización. No deben degradarse silenciosamente a “hazlo con los repositorios que casualmente encontraste”.
+
+Si en el futuro se necesita promover subconjuntos, eso requerirá definir una semántica nueva y explícita, no reutilizar accidentalmente la de una promoción completa.
 
 ## Regla para futuras decisiones
 

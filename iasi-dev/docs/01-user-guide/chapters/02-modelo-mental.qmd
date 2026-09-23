@@ -95,7 +95,9 @@ repositorio
     build / publish / release / commit
 
 organización completa
-    promote / restore / materialize / workflow promote
+    version / freeze / promote / restore / materialize / workflow promote
 ```
 
-No necesitas conocer cómo se implementa esa diferencia. Solo recordar que algunas operaciones trabajan proyecto a proyecto y otras coordinan varios repositorios como una unidad.
+Las operaciones de organización trabajan con el conjunto completo, no con una selección parcial de targets.
+
+En particular, `freeze` fija la versión actual de desarrollo mediante tags y `promote` reconstruye la organización estable desde esos tags.
