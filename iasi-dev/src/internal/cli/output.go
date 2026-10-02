@@ -47,7 +47,6 @@ func Direct(format string, args ...any) {
 	fmt.Fprintf(os.Stdout, format, args...)
 }
 
-// Preview writes preparation and dry-run information to the console in blue.
 func Preview(format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	lineBreak := strings.HasSuffix(message, "\n")
@@ -58,92 +57,88 @@ func Preview(format string, args ...any) {
 	}
 }
 
-func Verbose(Parms structures.Parms, format string, args ...any) {
-	writeMessage(Parms, os.Stdout, visibilityVerbose, levelVerbose, false, format, args...)
+func Verbose(Context structures.Context, format string, args ...any) {
+	writeMessage(Context, os.Stdout, visibilityVerbose, levelVerbose, false, format, args...)
 }
 
-func VeryVerbose(Parms structures.Parms, format string, args ...any) {
-	writeMessage(Parms, os.Stdout, visibilityVeryVerbose, levelSuccess, false, format, args...)
+func VeryVerbose(Context structures.Context, format string, args ...any) {
+	writeMessage(Context, os.Stdout, visibilityVeryVerbose, levelSuccess, false, format, args...)
 }
 
-func Info(Parms structures.Parms, format string, args ...any) {
+func Info(Context structures.Context, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	info(Parms, visibilityNormal, message)
+	info(Context, visibilityNormal, message)
 }
 
-// Header writes a highlighted command or workflow header.
-// In the log, the header is surrounded by a simple timestamped banner.
-func Header(Parms structures.Parms, format string, args ...any) {
+func Header(Context structures.Context, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	writeLogMessage(Parms, logBanner)
-	writeLogMessage(Parms, message)
-	writeLogMessage(Parms, logBanner)
+	writeLogMessage(Context, logBanner)
+	writeLogMessage(Context, message)
+	writeLogMessage(Context, logBanner)
 
-	if !messageVisible(Parms, visibilityNormal) {
+	if !messageVisible(Context, visibilityNormal) {
 		return
 	}
 
 	writeConsoleMessage(os.Stdout, levelHeader, true, message)
 }
 
-// Step writes a one-level indented Info message only in very verbose mode.
-func Step(Parms structures.Parms, format string, args ...any) {
-	StepAt(Parms, 1, format, args...)
+func Step(Context structures.Context, format string, args ...any) {
+	StepAt(Context, 1, format, args...)
 }
 
-// StepAt writes an Info message at the requested indentation depth.
-// Each level is exactly IndentSize spaces.
-func StepAt(Parms structures.Parms, depth int, format string, args ...any) {
+func StepAt(Context structures.Context, depth int, format string, args ...any) {
 	if depth < 0 {
 		depth = 0
 	}
 	message := strings.Repeat(" ", depth*IndentSize) + fmt.Sprintf(format, args...)
-	info(Parms, visibilityVeryVerbose, message)
+	info(Context, visibilityVeryVerbose, message)
 }
 
-func info(Parms structures.Parms, visibility messageVisibility, message string) {
-	writeMessage(Parms, os.Stdout, visibility, levelInfo, true, "%s", message)
+func info(Context structures.Context, visibility messageVisibility, message string) {
+	writeMessage(Context, os.Stdout, visibility, levelInfo, true, "%s", message)
 }
 
-func Success(Parms structures.Parms, format string, args ...any) {
-	writeMessage(Parms, os.Stdout, visibilityNormal, levelSuccess, false, format, args...)
+func Success(Context structures.Context, format string, args ...any) {
+	writeMessage(Context, os.Stdout, visibilityNormal, levelSuccess, false, format, args...)
 }
 
-func Warning(Parms structures.Parms, format string, args ...any) {
-	writeMessage(Parms, os.Stderr, visibilityNormal, levelWarning, false, format, args...)
+func Warning(Context structures.Context, format string, args ...any) {
+	RC.Add(Context.RC, RC.Warning)
+	writeMessage(Context, os.Stderr, visibilityNormal, levelWarning, false, format, args...)
 }
 
-// ErrorMessage writes a non-terminal error message.
-// The log entry is explicitly prefixed with ERROR while the console keeps the normal message.
-func ErrorMessage(Parms structures.Parms, format string, args ...any) {
+func Attention(Context structures.Context, format string, args ...any) {
+	RC.Add(Context.RC, RC.Attention)
+	writeMessage(Context, os.Stderr, visibilityNormal, levelWarning, false, "ATTENTION: "+format, args...)
+}
+
+func ErrorMessage(Context structures.Context, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	writeLogMessage(Parms, "ERROR: "+message)
+	writeLogMessage(Context, "ERROR: "+message)
 
-	if !messageVisible(Parms, visibilityNormal) {
+	if !messageVisible(Context, visibilityNormal) {
 		return
 	}
 
 	writeConsoleMessage(os.Stderr, levelError, false, message)
 }
 
-// Error writes an error message and aborts execution.
-// main owns the final os.Exit().
-func Error(rc int, Parms structures.Parms, format string, args ...any) {
-	ErrorMessage(Parms, format, args...)
-	Abort(rc, Parms)
+func Error(rc int, Context structures.Context, format string, args ...any) {
+	ErrorMessage(Context, format, args...)
+	Abort(rc, Context)
 }
 
-// Abort records the supplied RC bits and aborts execution without printing another message.
-func Abort(rc int, Parms structures.Parms) {
-	code := RC.Add(Parms.RC, rc)
+func Abort(rc int, Context structures.Context) {
+	code := RC.Add(Context.RC, rc)
 	panic(RC.Stop{Code: code})
 }
 
-func writeMessage(Parms structures.Parms, writer io.Writer, visibility messageVisibility, level messageLevel, bold bool, format string, args ...any) {
+func writeMessage(Context structures.Context, writer io.Writer, visibility messageVisibility, level messageLevel, bold bool, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	writeLogMessage(Parms, message)
+	writeLogMessage(Context, message)
 
-	if !messageVisible(Parms, visibility) {
+	if !messageVisible(Context, visibility) {
 		return
 	}
 
@@ -159,15 +154,15 @@ func writeConsoleMessage(writer io.Writer, level messageLevel, bold bool, messag
 	fmt.Fprintf(writer, "%s - %s%s%s\n", time.Now().Format("15:04:05"), style, message, colorReset)
 }
 
-func writeLogMessage(Parms structures.Parms, message string) {
-	if Parms.LogFile == nil {
+func writeLogMessage(Context structures.Context, message string) {
+	if Context.LogFile == nil {
 		return
 	}
-	fmt.Fprintf(Parms.LogFile, "%s - %s\n", time.Now().Format("15:04:05"), message)
+	fmt.Fprintf(Context.LogFile, "%s - %s\n", time.Now().Format("15:04:05"), message)
 }
 
-func messageVisible(Parms structures.Parms, visibility messageVisibility) bool {
-	return Parms.Verbose&int(visibility) != 0
+func messageVisible(Context structures.Context, visibility messageVisibility) bool {
+	return Context.Verbose&int(visibility) != 0
 }
 
 func messageColor(level messageLevel) string {

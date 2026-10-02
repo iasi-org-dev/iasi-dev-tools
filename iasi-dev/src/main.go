@@ -38,73 +38,71 @@ func run() (exitCode int) {
 	}
 
 	command := os.Args[1]
-	Parms := args.Parse(command, os.Args[2:])
-	veryVerbose = Parms.Verbose == 7
-	commands.SetDebug(Parms.Debug)
-	preparePath(&Parms)
+	Context := args.Parse(command, os.Args[2:])
+	veryVerbose = Context.Verbose == 7
+	commands.SetDebug(Context.Debug)
+	preparePath(&Context)
 
 	if command == "help" {
-		Parms.Help = true
+		Context.Help = true
 	}
 
-	if Parms.Message == "" {
-		Parms.Message = command
+	if Context.Message == "" {
+		Context.Message = command
 	}
 
-	logFile, err := createLogFile(command, Parms.LogDir)
+	logFile, err := createLogFile(command, Context.LogDir)
 	if err != nil {
-		cli.Error(RC.Error, Parms, "No se pudo crear el log: %v", err)
+		cli.Error(RC.Error, Context, "No se pudo crear el log: %v", err)
 	}
-	Parms.LogFile = logFile
-	defer Parms.LogFile.Close()
+	Context.LogFile = logFile
+	defer Context.LogFile.Close()
 
-	prepareParms(command, &Parms)
-	logParms(Parms)
+	prepareParms(command, &Context)
+	logParms(Context)
 
-	if Parms.PrepareOnly {
-		return RC.Value(Parms.RC)
+	if Context.PrepareOnly {
+		return RC.Value(Context.RC)
 	}
 
-	if Parms.Help {
+	if Context.Help {
 		printHelp()
-		RC.Add(Parms.RC, RC.NothingToDo)
-		return RC.Value(Parms.RC)
+		RC.Add(Context.RC, RC.NothingToDo)
+		return RC.Value(Context.RC)
 	}
 
 	switch command {
 	case "build":
-		runners.Build(&Parms, 0)
+		runners.Build(&Context, 0)
 	case "publish":
-		runners.Publish(&Parms, 0)
+		runners.Publish(&Context, 0)
 	case "commit":
-		runners.Commit(&Parms, 0)
+		runners.Commit(&Context, 0)
 	case "release":
-		runners.Release(&Parms, 0)
+		runners.Release(&Context, 0)
 	case "workflow":
-		runners.Workflow(&Parms)
+		runners.Workflow(&Context)
 	case "sync":
-		runners.Sync(&Parms)
+		runners.Sync(&Context)
 	case "version":
-		runners.Version(&Parms)
+		runners.Version(&Context)
 	case "freeze":
-		runners.Freeze(&Parms)
+		runners.Freeze(&Context)
 	case "promote":
-		runners.Promote(&Parms)
+		runners.Promote(&Context)
 	case "promote-check":
-		runners.PromoteCheck(&Parms)
+		runners.PromoteCheck(&Context)
 	case "restore":
-		runners.Restore(&Parms)
+		runners.Restore(&Context)
 	case "materialize":
-		runners.Materialize(&Parms)
+		runners.Materialize(&Context)
 	default:
-		cli.Error(RC.Error, Parms, "Comando desconocido: %q", command)
+		cli.Error(RC.Error, Context, "Comando desconocido: %q", command)
 	}
 
-	return RC.Value(Parms.RC)
+	return RC.Value(Context.RC)
 }
 
-// externalRC adapts the internal IASI return code to the process exit code.
-// NothingToDo is reported as success unless very-verbose mode (-V) is active.
 func externalRC(rc int, veryVerbose bool) int {
 	rc = RC.Result(rc)
 	if rc == RC.NothingToDo && !veryVerbose {

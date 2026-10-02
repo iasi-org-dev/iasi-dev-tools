@@ -29,17 +29,28 @@ func TestBuildGoBuildsWindowsAndLinuxIntoSameOutputDirectory(t *testing.T) {
 	}
 	defer logFile.Close()
 
-	target := structures.Target{
-		Path:      root,
-		Type:      "software",
-		Builder:   "go",
-		SourceDir: "src",
-		OutputDir: "bin",
-		Name:      "tool",
+	target := structures.Target{Path: root}
+	rc := RC.OK
+	context := structures.Context{
+		Platforms: []string{"windows", "linux"},
+		LogFile:   logFile,
+		RC:        &rc,
+		Configs: map[string]structures.Config{
+			filepath.Clean(root): {
+				IASI: map[string]any{
+					"type": "software",
+					"software": map[string]any{
+						"builder":    "go",
+						"name":       "tool",
+						"input-dir":  "src",
+						"output-dir": "bin",
+					},
+				},
+			},
+		},
 	}
-	parms := structures.Parms{Platforms: []string{"windows", "linux"}, LogFile: logFile}
 
-	if rc := buildGo(target, parms); rc != RC.OK {
+	if rc := buildGo(target, context); rc != RC.OK {
 		t.Fatalf("buildGo RC = %d", rc)
 	}
 	for _, path := range []string{filepath.Join(output, "tool.exe"), filepath.Join(output, "tool")} {

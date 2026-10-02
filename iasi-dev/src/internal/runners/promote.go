@@ -13,7 +13,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-
 var promotePrepareRemote = promoteRemotePrepare
 var promoteSynchronizeRemote = promoteRemoteSynchronize
 var promoteSetDestinationVersion = setOrganizationVersionFor
@@ -24,8 +23,6 @@ type semanticVersion struct {
 	patch int
 }
 
-// Promote materializes one frozen organization snapshot without carrying development history.
-// The requested version, source path and destination path are explicit; no workspace location is inferred.
 func Promote(Parms *structures.Parms) []string {
 	requireTargetVersion(Parms, "promote")
 	if _, ok := parseSemanticVersion(Parms.TargetVersion); !ok {

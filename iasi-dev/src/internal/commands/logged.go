@@ -7,7 +7,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// RunLogged executes a command writing its output directly to the log.
 func RunLogged(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunLogged: directory=%s name=%s args=%v\n", directory, name, args)
@@ -15,7 +14,6 @@ func RunLogged(directory string, logFile *os.File, name string, args ...string) 
 	return commandLogged(directory, false, logFile, name, args...)
 }
 
-// RunFriendlyLogged executes a friendly command writing its output directly to the log.
 func RunFriendlyLogged(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunFriendlyLogged: directory=%s name=%s args=%v\n", directory, name, args)
@@ -23,7 +21,6 @@ func RunFriendlyLogged(directory string, logFile *os.File, name string, args ...
 	return commandLogged(directory, true, logFile, name, args...)
 }
 
-// RunLoggedEnv executes a command with additional environment variables and writes its output to the log.
 func RunLoggedEnv(directory string, logFile *os.File, environment []string, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunLoggedEnv: directory=%s env=%v name=%s args=%v\n", directory, environment, name, args)

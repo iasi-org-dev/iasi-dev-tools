@@ -31,10 +31,12 @@ func TestDispatchPublishAndReleaseSupportWebsite(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			target := structures.Target{Path: root, Type: "website"}
-			parms := structures.Parms{DryRun: true, LogFile: logFile}
+			target := structures.Target{Path: root}
+			context := testContextForTarget(root, "website")
+			context.DryRun = true
+			context.LogFile = logFile
 
-			if rc := test.run(target, parms, 0); rc != RC.OK {
+			if rc := test.run(target, context, 0); rc != RC.OK {
 				_ = logFile.Close()
 				t.Fatalf("%s RC = %d, want %d", test.name, rc, RC.OK)
 			}
@@ -69,10 +71,11 @@ func TestDispatchLifecycleNothingToDoIsSilent(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			target := structures.Target{Path: root, Type: "software"}
-			parms := structures.Parms{LogFile: logFile}
+			target := structures.Target{Path: root}
+			context := testContextForTarget(root, "software")
+			context.LogFile = logFile
 
-			if rc := test.run(target, parms, 0); rc != RC.NothingToDo {
+			if rc := test.run(target, context, 0); rc != RC.NothingToDo {
 				_ = logFile.Close()
 				t.Fatalf("%s RC = %d, want %d", test.name, rc, RC.NothingToDo)
 			}

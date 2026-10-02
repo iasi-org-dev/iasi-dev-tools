@@ -12,7 +12,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Sync propagates entries from iasi-common to copies that already exist in the workspace.
 func Sync(Parms *structures.Parms) {
 	entries := Parms.RequestedTargets
 	if len(entries) == 0 {

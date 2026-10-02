@@ -8,7 +8,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Version shows the current organization version or explicitly sets it.
 func Version(Parms *structures.Parms) {
 	if Parms.TargetVersion == "" {
 		cli.Direct("%s\n", Parms.Version)

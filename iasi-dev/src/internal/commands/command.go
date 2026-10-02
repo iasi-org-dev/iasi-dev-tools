@@ -14,7 +14,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Run executes a command using its specific implementation when available.
 func Run(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("Run: directory=%s name=%s args=%v\n", directory, name, args)
@@ -27,7 +26,6 @@ func Run(directory string, logFile *os.File, name string, args ...string) struct
 	}
 }
 
-// RunFriendly executes a command producing friendly output when supported.
 func RunFriendly(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunFriendly: directory=%s name=%s args=%v\n", directory, name, args)
@@ -40,7 +38,6 @@ func RunFriendly(directory string, logFile *os.File, name string, args ...string
 	}
 }
 
-// RunDirect executes a command without using a specific implementation.
 func RunDirect(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunDirect: directory=%s name=%s args=%v\n", directory, name, args)
@@ -48,7 +45,6 @@ func RunDirect(directory string, logFile *os.File, name string, args ...string) 
 	return command(directory, false, logFile, name, args...)
 }
 
-// RunDirectLogged executes a direct command and writes its output to the log.
 func RunDirectLogged(directory string, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("RunDirectLogged: directory=%s name=%s args=%v\n", directory, name, args)
@@ -56,7 +52,6 @@ func RunDirectLogged(directory string, logFile *os.File, name string, args ...st
 	return commandLogged(directory, false, logFile, name, args...)
 }
 
-// command executes a generic command, logs it and captures its output.
 func command(directory string, friendly bool, logFile *os.File, name string, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("command: directory=%s friendly=%t name=%s args=%v\n", directory, friendly, name, args)
@@ -103,7 +98,6 @@ func command(directory string, friendly bool, logFile *os.File, name string, arg
 	return result
 }
 
-// commandLogged executes a generic command, logs it and writes its output directly to the log.
 func commandLogged(directory string, friendly bool, logFile *os.File, name string, args ...string) structures.Result {
 	return commandLoggedEnv(directory, friendly, logFile, nil, name, args...)
 }
@@ -149,7 +143,6 @@ func commandLoggedEnv(directory string, friendly bool, logFile *os.File, environ
 	return result
 }
 
-// writeCommand writes the complete command to the log and mirrors it during dry-run.
 func writeCommand(logFile *os.File, directory string, name string, args ...string) {
 	writeCommandEnv(logFile, directory, nil, name, args...)
 }

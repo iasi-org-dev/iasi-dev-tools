@@ -9,52 +9,48 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// handleRC accumulates one result and applies the common error policy.
-func handleRC(Parms *structures.Parms, rc int) int {
-	if Parms.Debug {
-		fmt.Printf("handleRC: tolerant=%t rc=%d (0x%02X)\n", Parms.Tolerant, rc, rc)
+func handleRC(Context *structures.Context, rc int) int {
+	if Context.Debug {
+		fmt.Printf("handleRC: tolerant=%t rc=%d (0x%02X)\n", Context.Tolerant, rc, rc)
 	}
 
 	if !RC.IsErroneous(rc) {
-		RC.Add(Parms.RC, rc)
+		RC.Add(Context.RC, rc)
 		return rc
 	}
 
-	if Parms.Tolerant {
-		RC.Add(Parms.RC, rc)
+	if Context.Tolerant {
+		RC.Add(Context.RC, rc)
 		return RC.Skip
 	}
 
 	cli.ErrorMessage(
-		*Parms,
+		*Context,
 		"La operación ha fallado con RC %d (0x%02X). Revisa el log: %s",
 		rc,
 		rc,
-		logName(*Parms),
+		logName(*Context),
 	)
-	cli.Abort(rc, *Parms)
+	cli.Abort(rc, *Context)
 	return RC.Skip
 }
 
-// logName returns the current log path when available.
-func logName(Parms structures.Parms) string {
-	if Parms.LogFile == nil {
+func logName(Context structures.Context) string {
+	if Context.LogFile == nil {
 		return "(sin log)"
 	}
-	return Parms.LogFile.Name()
+	return Context.LogFile.Name()
 }
 
-// addToBlackList blacklists repository.
-func addToBlackList(Parms *structures.Parms, repository string) {
-	if repository == "" || isBlackListed(*Parms, repository) {
+func addToBlackList(Context *structures.Context, repository string) {
+	if repository == "" || isBlackListed(*Context, repository) {
 		return
 	}
-	Parms.BlackList = append(Parms.BlackList, filepath.Clean(repository))
+	Context.BlackList = append(Context.BlackList, filepath.Clean(repository))
 }
 
-// isBlackListed reports whether repository has been invalidated by a previous operation.
-func isBlackListed(Parms structures.Parms, repository string) bool {
-	for _, blocked := range Parms.BlackList {
+func isBlackListed(Context structures.Context, repository string) bool {
+	for _, blocked := range Context.BlackList {
 		if filepath.Clean(blocked) == filepath.Clean(repository) {
 			return true
 		}
@@ -62,11 +58,10 @@ func isBlackListed(Parms structures.Parms, repository string) bool {
 	return false
 }
 
-// selectedTargets returns discovered IASI targets belonging to the currently selected repositories.
-func selectedTargets(Parms structures.Parms) []structures.Target {
-	selected := make([]structures.Target, 0, len(Parms.TargetDetails))
-	for _, target := range Parms.TargetDetails {
-		if target.Repository == "" || repositorySelected(Parms.Repos, target.Repository) {
+func selectedTargets(Context structures.Context) []structures.Target {
+	selected := make([]structures.Target, 0, len(Context.TargetDetails))
+	for _, target := range Context.TargetDetails {
+		if target.Repository == "" || repositorySelected(Context.Repos, target.Repository) {
 			selected = append(selected, target)
 		}
 	}
@@ -82,8 +77,6 @@ func repositorySelected(repositories []string, repository string) bool {
 	return false
 }
 
-// targetMessageDepth preserves discovered hierarchy while ensuring that a
-// top-level buildable target is shown one level below its enclosing operation.
 func targetMessageDepth(base int, target structures.Target) int {
 	if base < 0 {
 		base = 0
@@ -95,17 +88,17 @@ func targetMessageDepth(base int, target structures.Target) int {
 	return base + depth
 }
 
-func targetLabel(target structures.Target) string {
-	return fmt.Sprintf("%s [%s]", filepath.Base(target.Path), target.Type)
+func targetLabel(Context structures.Context, target structures.Target) string {
+	return fmt.Sprintf("%s [%s]", filepath.Base(target.Path), Context.Config(target.Path).Type())
 }
 
-func targetMessage(Parms structures.Parms, target structures.Target, depth int, headerVerb string, stepVerb string) {
-	label := targetLabel(target)
-	if Parms.Subcommand == "" {
-		cli.Header(Parms, "%s %s", headerVerb, label)
+func targetMessage(Context structures.Context, target structures.Target, depth int, headerVerb string, stepVerb string) {
+	label := targetLabel(Context, target)
+	if Context.Subcommand == "" {
+		cli.Header(Context, "%s %s", headerVerb, label)
 		return
 	}
-	cli.StepAt(Parms, targetMessageDepth(depth, target), "%s %s", stepVerb, label)
+	cli.StepAt(Context, targetMessageDepth(depth, target), "%s %s", stepVerb, label)
 }
 
 func appendRepository(repositories []string, repository string) []string {

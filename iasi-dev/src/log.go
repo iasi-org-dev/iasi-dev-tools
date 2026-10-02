@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,7 +13,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// createLogFile creates and keeps open the log for the complete execution.
 func createLogFile(command string, requestedDir string) (*os.File, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -33,66 +34,127 @@ func createLogFile(command string, requestedDir string) (*os.File, error) {
 	return os.Create(path)
 }
 
-// logParms records the fully prepared execution parameters and discovered lists.
-// -m and -M mirror the same information to the console; the log is always written.
-func logParms(Parms structures.Parms) {
+func logParms(Context structures.Context) {
 	var output strings.Builder
 
-	fmt.Fprintln(&output, "--- PARMS ------------------------------------------------")
-	fmt.Fprintf(&output, "Verbose: %d\n", Parms.Verbose)
-	fmt.Fprintf(&output, "All: %t\n", Parms.All)
-	fmt.Fprintf(&output, "Checkpoints: %t\n", Parms.Checkpoints)
-	fmt.Fprintf(&output, "Debug: %t\n", Parms.Debug)
-	fmt.Fprintf(&output, "PrepareOnly: %t\n", Parms.PrepareOnly)
-	fmt.Fprintf(&output, "DryRun: %t\n", Parms.DryRun)
-	fmt.Fprintf(&output, "Force: %t\n", Parms.Force)
-	fmt.Fprintf(&output, "Help: %t\n", Parms.Help)
-	fmt.Fprintf(&output, "Install: %t\n", Parms.Install)
-	fmt.Fprintf(&output, "Local: %t\n", Parms.Local)
-	fmt.Fprintf(&output, "Tolerant: %t\n", Parms.Tolerant)
-	fmt.Fprintf(&output, "Message: %q\n", Parms.Message)
-	fmt.Fprintf(&output, "Format: %q\n", Parms.Format)
-	writeStringSlice(&output, "Platforms", Parms.Platforms)
-	fmt.Fprintf(&output, "Path: %q\n", Parms.Path)
-	fmt.Fprintf(&output, "LogDir: %q\n", Parms.LogDir)
-	fmt.Fprintf(&output, "Organization: %q\n", Parms.Organization)
-	fmt.Fprintf(&output, "SourceOrganization: %q\n", Parms.SourceOrganization)
-	fmt.Fprintf(&output, "DestinationOrganization: %q\n", Parms.DestinationOrganization)
-	fmt.Fprintf(&output, "SourcePath: %q\n", Parms.SourcePath)
-	fmt.Fprintf(&output, "DestinationPath: %q\n", Parms.DestinationPath)
-	fmt.Fprintf(&output, "Version: %q\n", Parms.Version)
-	fmt.Fprintf(&output, "TargetVersion: %q\n", Parms.TargetVersion)
-	fmt.Fprintf(&output, "NextVersion: %q\n", Parms.NextVersion)
-	fmt.Fprintf(&output, "MaterializeDestination: %q\n", Parms.MaterializeDestination)
-	fmt.Fprintf(&output, "Subcommand: %q\n", Parms.Subcommand)
-	writeStringSlice(&output, "RequestedTargets", Parms.RequestedTargets)
-	writeTargets(&output, Parms)
-	writeStringSlice(&output, "Exclusions", Parms.Exclusions)
-	writeStringSlice(&output, "Repos", Parms.Repos)
-	writeStringSlice(&output, "BlackList", Parms.BlackList)
+	fmt.Fprintln(&output, "--- CONTEXT ----------------------------------------------")
+	fmt.Fprintf(&output, "Verbose: %d\n", Context.Verbose)
+	fmt.Fprintf(&output, "All: %t\n", Context.All)
+	fmt.Fprintf(&output, "Checkpoints: %t\n", Context.Checkpoints)
+	fmt.Fprintf(&output, "Debug: %t\n", Context.Debug)
+	fmt.Fprintf(&output, "PrepareOnly: %t\n", Context.PrepareOnly)
+	fmt.Fprintf(&output, "DryRun: %t\n", Context.DryRun)
+	fmt.Fprintf(&output, "Force: %t\n", Context.Force)
+	fmt.Fprintf(&output, "Help: %t\n", Context.Help)
+	fmt.Fprintf(&output, "Install: %t\n", Context.Install)
+	fmt.Fprintf(&output, "Local: %t\n", Context.Local)
+	fmt.Fprintf(&output, "Tolerant: %t\n", Context.Tolerant)
+	fmt.Fprintf(&output, "Message: %q\n", Context.Message)
+	fmt.Fprintf(&output, "Format: %q\n", Context.Format)
+	writeStringSlice(&output, "Platforms", Context.Platforms)
+	fmt.Fprintf(&output, "Path: %q\n", Context.Path)
+	fmt.Fprintf(&output, "LogDir: %q\n", Context.LogDir)
+	fmt.Fprintf(&output, "Organization: %q\n", Context.Organization)
+	fmt.Fprintf(&output, "SourceOrganization: %q\n", Context.SourceOrganization)
+	fmt.Fprintf(&output, "DestinationOrganization: %q\n", Context.DestinationOrganization)
+	fmt.Fprintf(&output, "SourcePath: %q\n", Context.SourcePath)
+	fmt.Fprintf(&output, "DestinationPath: %q\n", Context.DestinationPath)
+	fmt.Fprintf(&output, "Version: %q\n", Context.Version)
+	fmt.Fprintf(&output, "TargetVersion: %q\n", Context.TargetVersion)
+	fmt.Fprintf(&output, "NextVersion: %q\n", Context.NextVersion)
+	fmt.Fprintf(&output, "MaterializeDestination: %q\n", Context.MaterializeDestination)
+	fmt.Fprintf(&output, "Subcommand: %q\n", Context.Subcommand)
+	writeStringSlice(&output, "RequestedTargets", Context.RequestedTargets)
+	writeTargets(&output, Context)
+	writeConfigs(&output, Context)
+	writeStringSlice(&output, "Exclusions", Context.Exclusions)
+	writeStringSlice(&output, "Repos", Context.Repos)
+	writeStringSlice(&output, "BlackList", Context.BlackList)
 	fmt.Fprintln(&output, "----------------------------------------------------------")
 
 	message := output.String()
-	if Parms.LogFile != nil {
-		fmt.Fprint(Parms.LogFile, message)
+	if Context.LogFile != nil {
+		fmt.Fprint(Context.LogFile, message)
 	}
-	if Parms.PrepareOnly || Parms.DryRun {
+	if Context.PrepareOnly || Context.DryRun {
 		cli.Preview("%s", message)
 	}
 }
 
-func writeTargets(output *strings.Builder, Parms structures.Parms) {
+func writeTargets(output *strings.Builder, Context structures.Context) {
 	fmt.Fprintln(output, "Targets:")
-	if len(Parms.TargetDetails) == 0 {
-		for _, value := range Parms.Targets {
+	if len(Context.TargetDetails) == 0 {
+		for _, value := range Context.Targets {
 			fmt.Fprintf(output, "  %s [none]\n", filepath.Base(value))
 		}
 		return
 	}
 
-	for _, target := range Parms.TargetDetails {
+	for _, target := range Context.TargetDetails {
 		indent := strings.Repeat("  ", target.Depth+1)
-		fmt.Fprintf(output, "%s%s [%s]\n", indent, filepath.Base(target.Path), target.Type)
+		fmt.Fprintf(output, "%s%s [%s]\n", indent, filepath.Base(target.Path), Context.Config(target.Path).Type())
+	}
+}
+
+func writeConfigs(output *strings.Builder, Context structures.Context) {
+	fmt.Fprintln(output, "Configs:")
+
+	paths := make([]string, 0, len(Context.Configs))
+	for path := range Context.Configs {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		fmt.Fprintf(output, "  %s\n", path)
+		writeConfigValue(output, Context.Configs[path].IASI, 2)
+	}
+}
+
+func writeConfigValue(output *strings.Builder, value any, depth int) {
+	indent := strings.Repeat("  ", depth)
+
+	switch current := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(current))
+		for key := range current {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			child := current[key]
+			switch child.(type) {
+			case map[string]any:
+				fmt.Fprintf(output, "%s%s:\n", indent, key)
+				writeConfigValue(output, child, depth+1)
+			default:
+				fmt.Fprintf(output, "%s%s: %s\n", indent, key, formatConfigValue(child))
+			}
+		}
+	default:
+		fmt.Fprintf(output, "%s%s\n", indent, formatConfigValue(current))
+	}
+}
+
+func formatConfigValue(value any) string {
+	switch current := value.(type) {
+	case string:
+		return strconv.Quote(current)
+	case []string:
+		values := make([]string, len(current))
+		for index, item := range current {
+			values[index] = strconv.Quote(item)
+		}
+		return "[" + strings.Join(values, ", ") + "]"
+	case []any:
+		values := make([]string, len(current))
+		for index, item := range current {
+			values[index] = formatConfigValue(item)
+		}
+		return "[" + strings.Join(values, ", ") + "]"
+	default:
+		return fmt.Sprintf("%v", current)
 	}
 }
 

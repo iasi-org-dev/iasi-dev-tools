@@ -11,29 +11,28 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Publish processes discovered IASI targets through the publish dispatcher.
-func Publish(Parms *structures.Parms, depth int) []string {
-	if Parms.Debug {
-		fmt.Printf("Publish: targets=%v\n", Parms.TargetDetails)
+func Publish(Context *structures.Context, depth int) []string {
+	if Context.Debug {
+		fmt.Printf("Publish: targets=%v\n", Context.TargetDetails)
 	}
 	repositories := []string{}
 	processed := false
 
-	for _, target := range selectedTargets(*Parms) {
-		if target.Repository != "" && isBlackListed(*Parms, target.Repository) {
+	for _, target := range selectedTargets(*Context) {
+		if target.Repository != "" && isBlackListed(*Context, target.Repository) {
 			continue
 		}
 
-		rc := dispatchPublish(target, *Parms, depth)
+		rc := dispatchPublish(target, *Context, depth)
 		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
 
 		processed = true
-		Parms.LastRC = rc
-		if RC.Has(handleRC(Parms, rc), RC.Skip) {
+		Context.LastRC = rc
+		if RC.Has(handleRC(Context, rc), RC.Skip) {
 			if target.Repository != "" {
-				addToBlackList(Parms, target.Repository)
+				addToBlackList(Context, target.Repository)
 			}
 			continue
 		}
@@ -41,27 +40,27 @@ func Publish(Parms *structures.Parms, depth int) []string {
 	}
 
 	if !processed {
-		Parms.LastRC = RC.NothingToDo
-		RC.Add(Parms.RC, RC.NothingToDo)
+		Context.LastRC = RC.NothingToDo
+		RC.Add(Context.RC, RC.NothingToDo)
 	}
 	return repositories
 }
 
-func dispatchPublish(target structures.Target, Parms structures.Parms, depth int) int {
-	switch strings.ToLower(strings.TrimSpace(target.Type)) {
-	case "r", "quarto", "book", "guide", "website":
-		targetMessage(Parms, target, depth, "Publish", "Publishing")
-		return publishTarget(target.Path, Parms)
+func dispatchPublish(target structures.Target, Context structures.Context, depth int) int {
+	switch strings.ToLower(strings.TrimSpace(Context.Config(target.Path).Type())) {
+	case "quarto", "website", "r-package":
+		targetMessage(Context, target, depth, "Publish", "Publishing")
+		return publishTarget(target.Path, Context)
 	default:
 		return RC.NothingToDo
 	}
 }
 
-func publishTarget(target string, Parms structures.Parms) int {
+func publishTarget(target string, Context structures.Context) int {
 	parameters := []string{}
 
-	if Parms.Format != "" {
-		formats := strings.Split(Parms.Format, ",")
+	if Context.Format != "" {
+		formats := strings.Split(Context.Format, ",")
 		for i, format := range formats {
 			formats[i] = strconv.Quote(strings.TrimSpace(format))
 		}
@@ -73,6 +72,6 @@ func publishTarget(target string, Parms structures.Parms) int {
 	call := "iasi::publish(" + strings.Join(parameters, ", ") + ")"
 	expression := "rc = " + call + "; quit(status = as.integer(rc), save = \"no\")"
 
-	result := commands.RunLogged(target, Parms.LogFile, "Rscript", "-e", expression)
+	result := commands.RunLogged(target, Context.LogFile, "Rscript", "-e", expression)
 	return result.RC
 }

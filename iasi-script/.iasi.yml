@@ -1,5 +1,0 @@
-type: software
-builder: go
-name: iasi-scripts
-input-dir: src
-output-dir: ../bin

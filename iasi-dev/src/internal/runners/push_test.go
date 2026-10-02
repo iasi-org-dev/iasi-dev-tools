@@ -32,7 +32,7 @@ func TestPushRepositoryReplacesRemoteMain(t *testing.T) {
 	rc := RC.OK
 	parms := structures.Parms{RC: &rc}
 	if !pushRepository(&parms, repository) {
-		t.Fatal("pushRepository() = false, want true")
+		t.Fatal("pushRepository() = false")
 	}
 
 	remoteHead := strings.TrimSpace(gitTest(t, base, "--git-dir", remote, "rev-parse", "refs/heads/main"))

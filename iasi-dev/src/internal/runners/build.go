@@ -10,30 +10,28 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Build processes each discovered IASI target and delegates its build through
-// the type:builder dispatcher.
-func Build(Parms *structures.Parms, depth int) []string {
-	if Parms.Debug {
-		fmt.Printf("Build: targets=%v\n", Parms.TargetDetails)
+func Build(Context *structures.Context, depth int) []string {
+	if Context.Debug {
+		fmt.Printf("Build: targets=%v\n", Context.TargetDetails)
 	}
 	repositories := []string{}
 	processed := false
 
-	for _, target := range selectedTargets(*Parms) {
-		if target.Repository != "" && isBlackListed(*Parms, target.Repository) {
+	for _, target := range selectedTargets(*Context) {
+		if target.Repository != "" && isBlackListed(*Context, target.Repository) {
 			continue
 		}
 
-		rc := dispatchBuild(target, *Parms, depth)
+		rc := dispatchBuild(target, *Context, depth)
 		if RC.Result(rc) == RC.NothingToDo {
 			continue
 		}
 
 		processed = true
-		Parms.LastRC = rc
-		if RC.Has(handleRC(Parms, rc), RC.Skip) {
+		Context.LastRC = rc
+		if RC.Has(handleRC(Context, rc), RC.Skip) {
 			if target.Repository != "" {
-				addToBlackList(Parms, target.Repository)
+				addToBlackList(Context, target.Repository)
 			}
 			continue
 		}
@@ -41,31 +39,31 @@ func Build(Parms *structures.Parms, depth int) []string {
 	}
 
 	if !processed {
-		Parms.LastRC = RC.NothingToDo
-		RC.Add(Parms.RC, RC.NothingToDo)
+		Context.LastRC = RC.NothingToDo
+		RC.Add(Context.RC, RC.NothingToDo)
 	}
 	return repositories
 }
 
-func dispatchBuild(target structures.Target, Parms structures.Parms, depth int) int {
-	targetType := strings.ToLower(strings.TrimSpace(target.Type))
+func dispatchBuild(target structures.Target, Context structures.Context, depth int) int {
+	targetType := strings.ToLower(strings.TrimSpace(Context.Config(target.Path).Type()))
 
 	switch targetType {
 	case "software":
-		return buildSoftware(target, Parms, depth)
-	case "r", "quarto", "book", "guide", "website":
-		targetMessage(Parms, target, depth, "Build", "Building")
-		return buildR(target.Path, Parms)
+		return buildSoftware(target, Context, depth)
+	case "quarto", "website", "r-package":
+		targetMessage(Context, target, depth, "Build", "Building")
+		return buildR(target.Path, Context)
 	default:
 		return RC.NothingToDo
 	}
 }
 
-func buildR(target string, Parms structures.Parms) int {
+func buildR(target string, Context structures.Context) int {
 	parameters := []string{}
 
-	if Parms.Format != "" {
-		formats := strings.Split(Parms.Format, ",")
+	if Context.Format != "" {
+		formats := strings.Split(Context.Format, ",")
 		for i, format := range formats {
 			formats[i] = strconv.Quote(strings.TrimSpace(format))
 		}
@@ -75,6 +73,6 @@ func buildR(target string, Parms structures.Parms) int {
 	call := "iasi::build(" + strings.Join(parameters, ", ") + ")"
 	expression := "rc = " + call + "; quit(status = as.integer(rc), save = \"no\")"
 
-	result := commands.RunLogged(target, Parms.LogFile, "Rscript", "-e", expression)
+	result := commands.RunLogged(target, Context.LogFile, "Rscript", "-e", expression)
 	return result.RC
 }

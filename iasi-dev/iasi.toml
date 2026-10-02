@@ -1,0 +1,7 @@
+type = "software"
+
+[software]
+builder = "go"
+name = "iasi-dev"
+input-dir = "src"
+output-dir = "../bin"

@@ -17,8 +17,6 @@ type restoreState struct {
 	commit     string
 }
 
-// Restore restores every repository to a tagged organization version.
-// Without a target version it restores the repositories to main.
 func Restore(Parms *structures.Parms) []string {
 	target := restoreTarget(Parms)
 
@@ -86,7 +84,6 @@ func repositoryRestoreState(Parms *structures.Parms, repository string) restoreS
 	return restoreState{repository: repository, commit: strings.TrimSpace(result.Stdout)}
 }
 
-// restoreRepositories executes the restore transaction.
 func restoreRepositories(Parms *structures.Parms, target string, states []restoreState) {
 	restored := []restoreState{}
 

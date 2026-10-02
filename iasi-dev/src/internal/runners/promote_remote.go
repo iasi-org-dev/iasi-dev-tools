@@ -17,19 +17,12 @@ type promoteRemotePlan struct {
 	Delete []string
 }
 
-// promoteRemotePrepare creates only destination repositories that do not yet exist.
-// It is deliberately non-destructive and does not publish local contents. This is
-// the remote preparation performed by promote -l so later workflows can use origin.
 func promoteRemotePrepare(Parms *structures.Parms, repositories []string) {
 	remoteRepositories := promoteRemoteRepositories(Parms)
 	plan := promoteRemotePlanForMode(repositories, remoteRepositories, true)
 	promoteRemoteCreate(Parms, plan.Create)
 }
 
-// promoteRemoteSynchronize makes the destination GitHub organization mirror the
-// already promoted local workspace. Local repositories are the publication source:
-// missing remote repositories are created, every current repository is force-pushed,
-// and repositories no longer present locally are removed only after all pushes succeed.
 func promoteRemoteSynchronize(Parms *structures.Parms, repositories []string) {
 	remoteRepositories := promoteRemoteRepositories(Parms)
 	plan := promoteRemotePlanForMode(repositories, remoteRepositories, false)

@@ -12,9 +12,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Freeze closes the current development-organization version by tagging the
-// current HEAD of every repository. A freeze is always published to origin;
-// it never creates a copied or materialized workspace.
 func Freeze(Parms *structures.Parms) []string {
 	cli.Header(*Parms, "Freeze %s", Parms.Organization)
 	cli.Info(*Parms, "Version: %s", Parms.Version)

@@ -2,40 +2,43 @@ package structures
 
 import "os"
 
-type Parms struct {
-	Verbose                int      // Nivel de detalle de la salida.
-	All                    bool     // Ejecuta también las etapas anteriores.
-	Checkpoints            bool     // Usa workflows intermedios como checkpoints.
-	Debug                  bool     // Muestra mensajes temporales de depuración.
-	PrepareOnly            bool     // Prepara parámetros, los registra y termina (-m, modo interno).
-	DryRun                 bool     // Ejecuta el flujo sin lanzar comandos externos (-M, modo interno).
-	Force                  bool     // Fuerza la operación cuando está soportado.
-	Help                   bool     // Muestra la ayuda.
-	Install                bool     // Instala el artefacto cuando proceda.
-	Local                  bool     // Mantiene local el contenido promovido; algunas operaciones pueden preparar metadatos/remotos.
-	Tolerant               bool     // Continúa cuando una operación falla.
-	Message                string   // Mensaje utilizado para el commit.
-	Format                 string   // Formato o formatos de salida.
-	Platforms              []string // Plataformas preparadas para build; por defecto windows y linux.
-	Path                   string   // Directorio de trabajo solicitado con --path.
-	LogDir                 string   // Directorio de logs solicitado con --log.
-	Organization           string   // Organización GitHub explícita o deducida del workspace.
-	SourceOrganization      string   // Organización GitHub origen de promote.
-	DestinationOrganization string   // Organización GitHub destino de promote.
-	SourcePath              string   // Ruta origen explícita de promote, resuelta a absoluta al parsear.
-	DestinationPath         string   // Ruta destino explícita de promote, resuelta a absoluta al parsear.
-	Version                string   // Versión actual de la organización leída de GitHub.
-	TargetVersion          string   // Versión explícita solicitada por version, promote o restore.
-	NextVersion            string   // Nueva versión de desarrollo solicitada por workflow promote.
-	MaterializeDestination string   // Directorio destino solicitado por materialize, resuelto antes de --path.
-	Subcommand             string   // Subcomando cuando command es workflow.
-	LogFile                *os.File // Handle al fichero de log de la ejecución.
-	RC                     *int     // Código de retorno acumulativo compartido.
-	LastRC                 int      // Resultado de la última operación ejecutada; lo consumen los workflows.
-	Targets                []string // Rutas de proyectos IASI descubiertos dentro del ámbito solicitado.
-	TargetDetails          []Target // Metadatos de cada proyecto IASI descubierto.
-	RequestedTargets       []string // Objetivos solicitados por el usuario.
-	Exclusions             []string // Nombres excluidos durante el descubrimiento.
-	Repos                  []string // Repositorios Git descubiertos.
-	BlackList              []string // Repositorios que no deben procesarse en commit.
+type Context struct {
+	Verbose                int
+	All                    bool
+	Checkpoints            bool
+	Debug                  bool
+	PrepareOnly            bool
+	DryRun                 bool
+	Force                  bool
+	Help                   bool
+	Install                bool
+	Local                  bool
+	Tolerant               bool
+	Message                string
+	Format                 string
+	Platforms              []string
+	Path                   string
+	LogDir                 string
+	Organization           string
+	SourceOrganization      string
+	DestinationOrganization string
+	SourcePath              string
+	DestinationPath         string
+	Version                string
+	TargetVersion          string
+	NextVersion            string
+	MaterializeDestination string
+	Subcommand             string
+	LogFile                *os.File
+	RC                     *int
+	LastRC                 int
+	Targets                []string
+	TargetDetails          []Target
+	RequestedTargets       []string
+	Exclusions             []string
+	Repos                  []string
+	BlackList              []string
+	Configs                map[string]Config
 }
+
+type Parms = Context

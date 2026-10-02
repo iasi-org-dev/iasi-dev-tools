@@ -7,20 +7,16 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// buildSoftware dispatches software targets to the builder declared by the target.
-func buildSoftware(target structures.Target, Parms structures.Parms, depth int) int {
-	builder := strings.ToLower(strings.TrimSpace(target.Builder))
+func buildSoftware(target structures.Target, Context structures.Context, depth int) int {
+	builder := strings.ToLower(strings.TrimSpace(Context.Config(target.Path).SoftwareBuilder()))
 
 	switch builder {
 	case "go":
-		targetMessage(Parms, target, depth, "Build", "Building")
-		return buildGo(target, Parms)
+		targetMessage(Context, target, depth, "Build", "Building")
+		return buildGo(target, Context)
 	case "r":
-		targetMessage(Parms, target, depth, "Build", "Building")
-		return buildR(target.Path, Parms)
-	case "iasi-script":
-		targetMessage(Parms, target, depth, "Build", "Building")
-		return buildIASIScript(target, Parms)
+		targetMessage(Context, target, depth, "Build", "Building")
+		return buildR(target.Path, Context)
 	default:
 		return RC.NothingToDo
 	}

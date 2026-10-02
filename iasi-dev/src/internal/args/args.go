@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"iasi-dev/internal/cli"
+	iasiconfig "iasi-dev/internal/config"
 	"iasi-dev/internal/consts"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
@@ -14,147 +15,135 @@ import (
 )
 
 // Parse parses command-line arguments. Preparation is performed later by main.
-func Parse(command string, values []string) structures.Parms {
+func Parse(command string, values []string) structures.Context {
 	subcommand := ""
 
 	if command == "workflow" {
 		if len(values) == 0 {
 			rc := RC.OK
-			cli.Error(RC.Error, structures.Parms{RC: &rc}, "Falta el comando del workflow.")
+			cli.Error(RC.Error, structures.Context{RC: &rc}, "Falta el comando del workflow.")
 		}
 
 		subcommand = values[0]
 		values = values[1:]
 	}
 
-	Parms := parseArguments(command, subcommand, values)
-	Parms.Subcommand = subcommand
-	validateCheckModes(&Parms)
-	validateLocalMode(command, &Parms)
-	extractPromoteOperands(command, &Parms)
-	extractWorkflowPromoteParameters(command, &Parms)
-	extractTargetVersion(command, &Parms)
-	extractVersionOperands(command, &Parms)
-	validateOrganizationWideCommand(command, &Parms)
-	extractMaterializeOperands(command, &Parms)
-	if Parms.RequestedTargets == nil {
-		Parms.RequestedTargets = append([]string{}, Parms.Targets...)
+	Context := parseArguments(command, subcommand, values)
+	Context.Subcommand = subcommand
+	validateCheckModes(&Context)
+	validateLocalMode(command, &Context)
+	extractPromoteOperands(command, &Context)
+	extractWorkflowPromoteParameters(command, &Context)
+	extractTargetVersion(command, &Context)
+	extractVersionOperands(command, &Context)
+	validateOrganizationWideCommand(command, &Context)
+	extractMaterializeOperands(command, &Context)
+	if Context.RequestedTargets == nil {
+		Context.RequestedTargets = append([]string{}, Context.Targets...)
 	}
 
-	return Parms
+	return Context
 }
 
-func validateCheckModes(Parms *structures.Parms) {
-	if Parms.PrepareOnly && Parms.DryRun {
-		cli.Error(RC.Error, *Parms, "-m y -M son incompatibles.")
-	}
-}
-
-func validateLocalMode(command string, Parms *structures.Parms) {
-	if command == "freeze" && Parms.Local {
-		cli.Error(RC.Error, *Parms, "-l no está soportado por freeze: freeze siempre publica los tags.")
+func validateCheckModes(Context *structures.Context) {
+	if Context.PrepareOnly && Context.DryRun {
+		cli.Error(RC.Error, *Context, "-m y -M son incompatibles.")
 	}
 }
 
-// extractPromoteOperands requires the complete promotion contract explicitly:
-//   promote <version> <source-path> <destination-path>
-// Relative paths are resolved later against the effective working directory, after --path if present.
-func extractPromoteOperands(command string, Parms *structures.Parms) {
+func validateLocalMode(command string, Context *structures.Context) {
+	if command == "freeze" && Context.Local {
+		cli.Error(RC.Error, *Context, "-l no está soportado por freeze: freeze siempre publica los tags.")
+	}
+}
+
+func extractPromoteOperands(command string, Context *structures.Context) {
 	isPromote := command == "promote" || command == "promote-check"
 	if !isPromote {
 		return
 	}
-	if len(Parms.Targets) != 3 {
-		cli.Error(RC.Error, *Parms, "promote requiere <version> <source-path> <destination-path>.")
+	if len(Context.Targets) != 3 {
+		cli.Error(RC.Error, *Context, "promote requiere <version> <source-path> <destination-path>.")
 	}
 
-	version := strings.TrimSpace(Parms.Targets[0])
-	source := strings.TrimSpace(Parms.Targets[1])
-	destination := strings.TrimSpace(Parms.Targets[2])
+	version := strings.TrimSpace(Context.Targets[0])
+	source := strings.TrimSpace(Context.Targets[1])
+	destination := strings.TrimSpace(Context.Targets[2])
 	if !looksLikeSemanticVersion(version) {
-		cli.Error(RC.Error, *Parms, "La versión no es válida: %s", version)
+		cli.Error(RC.Error, *Context, "La versión no es válida: %s", version)
 	}
 	if source == "" || destination == "" {
-		cli.Error(RC.Error, *Parms, "source-path y destination-path son obligatorios.")
+		cli.Error(RC.Error, *Context, "source-path y destination-path son obligatorios.")
 	}
 
 	sourcePath := filepath.Clean(source)
 	destinationPath := filepath.Clean(destination)
 	if strings.EqualFold(sourcePath, destinationPath) {
-		cli.Error(RC.Error, *Parms, "source-path y destination-path deben ser rutas distintas.")
+		cli.Error(RC.Error, *Context, "source-path y destination-path deben ser rutas distintas.")
 	}
 
-	Parms.TargetVersion = version
-	Parms.SourcePath = sourcePath
-	Parms.DestinationPath = destinationPath
-	Parms.DestinationOrganization = filepath.Base(destinationPath)
-	Parms.Targets = nil
+	Context.TargetVersion = version
+	Context.SourcePath = sourcePath
+	Context.DestinationPath = destinationPath
+	Context.DestinationOrganization = filepath.Base(destinationPath)
+	Context.Targets = nil
 }
 
-
-// extractWorkflowPromoteParameters requires the orchestration contract explicitly:
-//   workflow promote --source <source-path> --dest <destination-path> --version vMAJOR.MINOR.PATCH
-// --version is the next development version; the version promoted is the source VERSION read during preparation.
-func extractWorkflowPromoteParameters(command string, Parms *structures.Parms) {
-	if command != "workflow" || Parms.Subcommand != "promote" {
+func extractWorkflowPromoteParameters(command string, Context *structures.Context) {
+	if command != "workflow" || Context.Subcommand != "promote" {
 		return
 	}
-	if len(Parms.Targets) != 0 {
-		cli.Error(RC.Error, *Parms, "workflow promote usa parámetros nombrados: --source, --dest y --version.")
+	if len(Context.Targets) != 0 {
+		cli.Error(RC.Error, *Context, "workflow promote usa parámetros nombrados: --source, --dest y --version.")
 	}
-	if strings.TrimSpace(Parms.SourcePath) == "" {
-		cli.Error(RC.Error, *Parms, "workflow promote requiere --source <source-path>.")
+	if strings.TrimSpace(Context.SourcePath) == "" {
+		cli.Error(RC.Error, *Context, "workflow promote requiere --source <source-path>.")
 	}
-	if strings.TrimSpace(Parms.DestinationPath) == "" {
-		cli.Error(RC.Error, *Parms, "workflow promote requiere --dest <destination-path>.")
+	if strings.TrimSpace(Context.DestinationPath) == "" {
+		cli.Error(RC.Error, *Context, "workflow promote requiere --dest <destination-path>.")
 	}
-	if strings.TrimSpace(Parms.NextVersion) == "" {
-		cli.Error(RC.Error, *Parms, "workflow promote requiere --version vMAJOR.MINOR.PATCH.")
+	if strings.TrimSpace(Context.NextVersion) == "" {
+		cli.Error(RC.Error, *Context, "workflow promote requiere --version vMAJOR.MINOR.PATCH.")
 	}
-	if !looksLikeSemanticVersion(Parms.NextVersion) {
-		cli.Error(RC.Error, *Parms, "La nueva versión no es válida: %s", Parms.NextVersion)
+	if !looksLikeSemanticVersion(Context.NextVersion) {
+		cli.Error(RC.Error, *Context, "La nueva versión no es válida: %s", Context.NextVersion)
 	}
 
-	sourcePath := filepath.Clean(Parms.SourcePath)
-	destinationPath := filepath.Clean(Parms.DestinationPath)
+	sourcePath := filepath.Clean(Context.SourcePath)
+	destinationPath := filepath.Clean(Context.DestinationPath)
 	if strings.EqualFold(sourcePath, destinationPath) {
-		cli.Error(RC.Error, *Parms, "source-path y destination-path deben ser rutas distintas.")
+		cli.Error(RC.Error, *Context, "source-path y destination-path deben ser rutas distintas.")
 	}
 
-	Parms.SourcePath = sourcePath
-	Parms.DestinationPath = destinationPath
-	Parms.DestinationOrganization = filepath.Base(destinationPath)
+	Context.SourcePath = sourcePath
+	Context.DestinationPath = destinationPath
+	Context.DestinationOrganization = filepath.Base(destinationPath)
 }
 
-// extractTargetVersion separates restore's optional version operand from filesystem targets.
-func extractTargetVersion(command string, Parms *structures.Parms) {
-	requiresVersion := command == "restore"
-	if !requiresVersion || len(Parms.Targets) == 0 {
+func extractTargetVersion(command string, Context *structures.Context) {
+	if command != "restore" || len(Context.Targets) == 0 {
 		return
 	}
 
-	Parms.TargetVersion = Parms.Targets[0]
-	Parms.Targets = Parms.Targets[1:]
+	Context.TargetVersion = Context.Targets[0]
+	Context.Targets = Context.Targets[1:]
 }
 
-// extractVersionOperands supports querying VERSION or explicitly setting it:
-//   version
-//   version v0.6.0
-func extractVersionOperands(command string, Parms *structures.Parms) {
-	if command != "version" || len(Parms.Targets) == 0 {
+func extractVersionOperands(command string, Context *structures.Context) {
+	if command != "version" || len(Context.Targets) == 0 {
 		return
 	}
-	if len(Parms.Targets) > 1 {
-		cli.Error(RC.Error, *Parms, "version acepta como máximo una versión vMAJOR.MINOR.PATCH.")
+	if len(Context.Targets) > 1 {
+		cli.Error(RC.Error, *Context, "version acepta como máximo una versión vMAJOR.MINOR.PATCH.")
 	}
 
-	version := Parms.Targets[0]
+	version := Context.Targets[0]
 	if !looksLikeSemanticVersion(version) {
-		cli.Error(RC.Error, *Parms, "La versión no es válida: %s", version)
+		cli.Error(RC.Error, *Context, "La versión no es válida: %s", version)
 	}
 
-	Parms.TargetVersion = version
-	Parms.Targets = nil
+	Context.TargetVersion = version
+	Context.Targets = nil
 }
 
 func looksLikeSemanticVersion(value string) bool {
@@ -178,202 +167,198 @@ func looksLikeSemanticVersion(value string) bool {
 	return true
 }
 
-func validateOrganizationWideCommand(command string, Parms *structures.Parms) {
-	organizationWide := command == "freeze" || command == "promote" || command == "promote-check" || (command == "workflow" && Parms.Subcommand == "promote")
+func validateOrganizationWideCommand(command string, Context *structures.Context) {
+	organizationWide := command == "freeze" || command == "promote" || command == "promote-check" || (command == "workflow" && Context.Subcommand == "promote")
 	if !organizationWide {
 		return
 	}
-	if len(Parms.Targets) != 0 {
-		cli.Error(RC.Error, *Parms, "%s opera sobre la organización completa y no acepta targets; usa --path para elegir el workspace.", command)
+	if len(Context.Targets) != 0 {
+		cli.Error(RC.Error, *Context, "%s opera sobre la organización completa y no acepta targets; usa --path para elegir el workspace.", command)
 	}
 }
 
-// extractMaterializeOperands separates materialize's destination from the optional source target.
-// The destination is resolved before --path changes the working directory. The optional source
-// remains a normal target and therefore follows the common preparation flow.
-func extractMaterializeOperands(command string, Parms *structures.Parms) {
+func extractMaterializeOperands(command string, Context *structures.Context) {
 	if command != "materialize" {
 		return
 	}
 
-	Parms.RequestedTargets = append([]string{}, Parms.Targets...)
-	if len(Parms.Targets) == 0 {
+	Context.RequestedTargets = append([]string{}, Context.Targets...)
+	if len(Context.Targets) == 0 {
 		return
 	}
-	if len(Parms.Targets) > 2 {
-		cli.Error(RC.Error, *Parms, "materialize acepta <destino> y, opcionalmente, [origen].")
+	if len(Context.Targets) > 2 {
+		cli.Error(RC.Error, *Context, "materialize acepta <destino> y, opcionalmente, [origen].")
 	}
 
-	destination, err := filepath.Abs(Parms.Targets[0])
+	destination, err := filepath.Abs(Context.Targets[0])
 	if err != nil {
-		cli.Error(RC.Error, *Parms, "No se puede resolver el destino de materialize: %q", Parms.Targets[0])
+		cli.Error(RC.Error, *Context, "No se puede resolver el destino de materialize: %q", Context.Targets[0])
 	}
-	Parms.MaterializeDestination = filepath.Clean(destination)
+	Context.MaterializeDestination = filepath.Clean(destination)
 
-	if len(Parms.Targets) == 2 {
-		Parms.Targets = []string{Parms.Targets[1]}
+	if len(Context.Targets) == 2 {
+		Context.Targets = []string{Context.Targets[1]}
 		return
 	}
 
-	// No explicit source: common preparation will use the current directory.
-	Parms.Targets = nil
+	Context.Targets = nil
 }
 
-func parseArguments(command string, subcommand string, args []string) structures.Parms {
+func parseArguments(command string, subcommand string, args []string) structures.Context {
 	rc := RC.OK
-	Parms := structures.Parms{
+	Context := structures.Context{
 		Verbose:    1,
 		RC:         &rc,
 		Exclusions: append([]string{}, consts.RequiredExclusions...),
+		Configs:    map[string]structures.Config{},
 	}
 
 	for i := 0; i < len(args); i++ {
 		if len(args[i]) == 0 {
-			invalidArgument(&Parms, args[i])
+			invalidArgument(&Context, args[i])
 		}
 
 		switch args[i][0] {
 		case '-':
-			parseFlagOrParameter(command, subcommand, args, &i, &Parms)
+			parseFlagOrParameter(command, subcommand, args, &i, &Context)
 		default:
-			parseTarget(args, i, &Parms)
+			parseTarget(args, i, &Context)
 		}
 	}
 
-	return Parms
+	return Context
 }
 
-func parseTarget(args []string, i int, Parms *structures.Parms) {
-	Parms.Targets = append(Parms.Targets, args[i])
+func parseTarget(args []string, i int, Context *structures.Context) {
+	Context.Targets = append(Context.Targets, args[i])
 }
 
-func parseFlagOrParameter(command string, subcommand string, args []string, i *int, Parms *structures.Parms) {
+func parseFlagOrParameter(command string, subcommand string, args []string, i *int, Context *structures.Context) {
 	switch len(args[*i]) {
 	case 1:
-		invalidArgument(Parms, args[*i])
+		invalidArgument(Context, args[*i])
 	case 2:
-		parseFlag(args, *i, Parms)
+		parseFlag(args, *i, Context)
 	default:
-		parseParameter(command, subcommand, args, i, Parms)
+		parseParameter(command, subcommand, args, i, Context)
 	}
 }
 
-func parseFlag(args []string, i int, Parms *structures.Parms) {
+func parseFlag(args []string, i int, Context *structures.Context) {
 	if args[i][1] == '-' {
-		invalidArgument(Parms, args[i])
+		invalidArgument(Context, args[i])
 	}
 
 	switch args[i][1] {
 	case 'a':
-		Parms.All = true
+		Context.All = true
 	case 'c':
-		Parms.Checkpoints = true
+		Context.Checkpoints = true
 	case 'd':
-		Parms.Debug = true
+		Context.Debug = true
 	case 'f':
-		Parms.Force = true
+		Context.Force = true
 	case 'h':
-		Parms.Help = true
+		Context.Help = true
 	case 'i':
-		Parms.Install = true
+		Context.Install = true
 	case 'l':
-		Parms.Local = true
+		Context.Local = true
 	case 'm':
-		Parms.PrepareOnly = true
+		Context.PrepareOnly = true
 	case 'M':
-		Parms.DryRun = true
+		Context.DryRun = true
 	case 's':
-		Parms.Verbose = 0
+		Context.Verbose = 0
 	case 't':
-		Parms.Tolerant = true
+		Context.Tolerant = true
 	case 'v':
-		Parms.Verbose = 3
+		Context.Verbose = 3
 	case 'V':
-		Parms.Verbose = 7
+		Context.Verbose = 7
 	default:
-		invalidArgument(Parms, args[i])
+		invalidArgument(Context, args[i])
 	}
 }
 
-func parseParameter(command string, subcommand string, args []string, i *int, Parms *structures.Parms) {
+func parseParameter(command string, subcommand string, args []string, i *int, Context *structures.Context) {
 	if args[*i][1] != '-' {
-		invalidArgument(Parms, args[*i])
+		invalidArgument(Context, args[*i])
 	}
 	if *i+1 >= len(args) {
-		missingParameterValue(Parms, args[*i])
+		missingParameterValue(Context, args[*i])
 	}
 
 	name := args[*i][2:]
 	(*i)++
 	value := args[*i]
 
-	validateParameter(command, subcommand, Parms, name, value)
+	validateParameter(command, subcommand, Context, name, value)
 }
 
-func validateParameter(command string, subcommand string, Parms *structures.Parms, name string, value string) {
+func validateParameter(command string, subcommand string, Context *structures.Context, name string, value string) {
 	switch name {
 	case "exclude":
-		processExclusions(Parms, value)
+		processExclusions(Context, value)
 	case "format":
-		Parms.Format = value
+		Context.Format = value
 	case "message":
-		Parms.Message = value
+		Context.Message = value
 	case "log":
-		Parms.LogDir = value
+		Context.LogDir = value
 	case "path":
-		Parms.Path = value
+		Context.Path = value
 	case "platform":
-		Parms.Platforms = []string{strings.ToLower(strings.TrimSpace(value))}
+		Context.Platforms = []string{strings.ToLower(strings.TrimSpace(value))}
 	case "source":
 		if command != "workflow" || subcommand != "promote" {
-			invalidArgument(Parms, "--"+name)
+			invalidArgument(Context, "--"+name)
 		}
-		Parms.SourcePath = value
+		Context.SourcePath = value
 	case "dest":
 		if command != "workflow" || subcommand != "promote" {
-			invalidArgument(Parms, "--"+name)
+			invalidArgument(Context, "--"+name)
 		}
-		Parms.DestinationPath = value
+		Context.DestinationPath = value
 	case "version":
 		if command != "workflow" || subcommand != "promote" {
-			invalidArgument(Parms, "--"+name)
+			invalidArgument(Context, "--"+name)
 		}
-		Parms.NextVersion = value
+		Context.NextVersion = value
 	default:
-		invalidArgument(Parms, "--"+name)
+		invalidArgument(Context, "--"+name)
 	}
 }
 
-func invalidArgument(Parms *structures.Parms, argument string) {
-	cli.Error(RC.Error, *Parms, "Argumento no válido: %q", argument)
+func invalidArgument(Context *structures.Context, argument string) {
+	cli.Error(RC.Error, *Context, "Argumento no válido: %q", argument)
 }
 
-func missingParameterValue(Parms *structures.Parms, parameter string) {
-	cli.Error(RC.Error, *Parms, "Falta el valor del parámetro: %q", parameter)
+func missingParameterValue(Context *structures.Context, parameter string) {
+	cli.Error(RC.Error, *Context, "Falta el valor del parámetro: %q", parameter)
 }
 
-// Prepare resolves the requested scope, discovers Git repositories and IASI targets.
-func Prepare(Parms *structures.Parms) {
-	preparePlatforms(Parms)
-	processTargets(Parms)
+func Prepare(Context *structures.Context) {
+	preparePlatforms(Context)
+	processTargets(Context)
 }
 
-func preparePlatforms(Parms *structures.Parms) {
-	if len(Parms.Platforms) == 0 {
-		Parms.Platforms = []string{"windows", "linux"}
+func preparePlatforms(Context *structures.Context) {
+	if len(Context.Platforms) == 0 {
+		Context.Platforms = []string{"windows", "linux"}
 		return
 	}
 
-	for _, platform := range Parms.Platforms {
+	for _, platform := range Context.Platforms {
 		switch strings.ToLower(strings.TrimSpace(platform)) {
 		case "windows", "linux":
 		default:
-			cli.Error(RC.Error, *Parms, "Plataforma no soportada: %q", platform)
+			cli.Error(RC.Error, *Context, "Plataforma no soportada: %q", platform)
 		}
 	}
 }
 
-func processExclusions(Parms *structures.Parms, values string) {
+func processExclusions(Context *structures.Context, values string) {
 	for _, value := range strings.Split(values, ",") {
 		value = strings.TrimSpace(value)
 		if value == "" {
@@ -381,20 +366,20 @@ func processExclusions(Parms *structures.Parms, values string) {
 		}
 
 		if info, err := os.Stat(value); err == nil && !info.IsDir() {
-			addExclusionsFile(Parms, value)
+			addExclusionsFile(Context, value)
 			continue
 		}
 
-		Parms.Exclusions = append(Parms.Exclusions, value)
+		Context.Exclusions = append(Context.Exclusions, value)
 	}
 
-	Parms.Exclusions = uniqueStrings(Parms.Exclusions)
+	Context.Exclusions = uniqueStrings(Context.Exclusions)
 }
 
-func addExclusionsFile(Parms *structures.Parms, path string) {
+func addExclusionsFile(Context *structures.Context, path string) {
 	file, err := os.Open(path)
 	if err != nil {
-		cli.Error(RC.Error, *Parms, "No se puede leer el fichero de exclusiones: %q", path)
+		cli.Error(RC.Error, *Context, "No se puede leer el fichero de exclusiones: %q", path)
 	}
 	defer file.Close()
 
@@ -404,37 +389,37 @@ func addExclusionsFile(Parms *structures.Parms, path string) {
 		if value == "" {
 			continue
 		}
-		Parms.Exclusions = append(Parms.Exclusions, value)
+		Context.Exclusions = append(Context.Exclusions, value)
 	}
 
 	if err := scanner.Err(); err != nil {
-		cli.Error(RC.Error, *Parms, "Error leyendo el fichero de exclusiones: %q", path)
+		cli.Error(RC.Error, *Context, "Error leyendo el fichero de exclusiones: %q", path)
 	}
 }
 
-// processTargets resolves the requested scope, discovers Git repositories and then
-// discovers IASI targets below that same scope from ?iasi.yml markers.
-func processTargets(Parms *structures.Parms) {
-	roots := Parms.Targets
+func processTargets(Context *structures.Context) {
+	roots := Context.Targets
 	if len(roots) == 0 {
 		roots = []string{"."}
 	}
 
 	scopes := []string{}
-	Parms.Targets = []string{}
-	Parms.Repos = []string{}
-	Parms.BlackList = []string{}
+	Context.Targets = []string{}
+	Context.TargetDetails = nil
+	Context.Repos = []string{}
+	Context.BlackList = []string{}
+	Context.Configs = map[string]structures.Config{}
 
 	for _, root := range roots {
 		path, err := filepath.Abs(root)
 		if err != nil {
-			cli.Warning(*Parms, "Se ignora %q: no se puede resolver la ruta.", root)
+			cli.Warning(*Context, "Se ignora %q: no se puede resolver la ruta.", root)
 			continue
 		}
 
 		info, err := os.Stat(path)
 		if err != nil || !info.IsDir() {
-			cli.Warning(*Parms, "Se ignora %q: no existe o no es un directorio.", root)
+			cli.Warning(*Context, "Se ignora %q: no existe o no es un directorio.", root)
 			continue
 		}
 
@@ -442,42 +427,38 @@ func processTargets(Parms *structures.Parms) {
 		scopes = append(scopes, path)
 
 		if repository := tools.FindRepo(path); repository != "" {
-			Parms.Repos = append(Parms.Repos, repository)
+			Context.Repos = append(Context.Repos, repository)
 			continue
 		}
-		discoverRepos(Parms, path)
+		discoverRepos(Context, path)
 	}
 
-	Parms.Repos = uniqueStrings(Parms.Repos)
+	Context.Repos = uniqueStrings(Context.Repos)
+
 	for _, scope := range uniqueStrings(scopes) {
-		discoverIASITargets(Parms, scope)
+		discoverIASITargets(Context, scope)
 	}
-	Parms.Targets = uniqueStrings(Parms.Targets)
-	Parms.TargetDetails = describeTargets(Parms.Targets)
+
+	Context.Targets = uniqueStrings(Context.Targets)
+	Context.TargetDetails = describeTargets(Context, Context.Targets)
 }
 
-// describeTargets reads the small flat target configuration needed by iasi-dev
-// and derives the project hierarchy from discovered ancestor targets.
-func describeTargets(targets []string) []structures.Target {
+func describeTargets(Context *structures.Context, targets []string) []structures.Target {
 	details := make([]structures.Target, 0, len(targets))
+
 	for _, path := range targets {
-		config := readTargetConfig(path)
-		targetType := strings.TrimSpace(config["type"])
-		if targetType == "" {
-			targetType = "none"
+		path = filepath.Clean(path)
+
+		config, err := iasiconfig.Read(path)
+		if err != nil {
+			cli.Error(RC.Error, *Context, "Configuración IASI inválida en %q: %v", path, err)
 		}
+
+		Context.Configs[path] = config
 
 		detail := structures.Target{
-			Path:       filepath.Clean(path),
-			Type:       targetType,
-			Builder:    strings.TrimSpace(config["builder"]),
+			Path:       path,
 			Repository: tools.FindRepo(path),
-		}
-
-		if strings.EqualFold(targetType, "software") {
-			detail.SourceDir = configValue(config, "source-dir", "src")
-			detail.OutputDir = configValue(config, "output-dir", "_outputs")
-			detail.Name = configValue(config, "name", defaultTargetName(filepath.Base(path)))
 		}
 
 		for _, ancestor := range targets {
@@ -485,162 +466,142 @@ func describeTargets(targets []string) []structures.Target {
 				detail.Depth++
 			}
 		}
+
 		details = append(details, detail)
 	}
-	return details
-}
 
-func configValue(config map[string]string, name string, fallback string) string {
-	value := strings.TrimSpace(config[name])
-	if value == "" {
-		return fallback
-	}
-	return value
+	return details
 }
 
 func defaultTargetName(name string) string {
 	original := name
 	i := 0
+
 	for i < len(name) && name[i] >= '0' && name[i] <= '9' {
 		i++
 	}
 	if i == 0 {
 		return name
 	}
+
 	for i < len(name) && (name[i] == '-' || name[i] == '_' || name[i] == '.' || name[i] == ' ') {
 		i++
 	}
 	if i >= len(name) {
 		return original
 	}
+
 	return name[i:]
 }
 
 func isAncestorTarget(parent string, child string) bool {
 	parent = filepath.Clean(parent)
 	child = filepath.Clean(child)
+
 	if parent == child {
 		return false
 	}
+
 	relative, err := filepath.Rel(parent, child)
 	if err != nil || relative == "." || relative == ".." {
 		return false
 	}
+
 	return !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
-// readTargetConfig intentionally reads only the flat scalar keys currently
-// needed by iasi-dev. The on-disk configuration format is transitional.
-func readTargetConfig(path string) map[string]string {
-	config := map[string]string{}
-	marker := targetMarker(path)
-	if marker == "" {
-		return config
-	}
-
-	file, err := os.Open(marker)
-	if err != nil {
-		return config
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(strings.TrimPrefix(scanner.Text(), "\ufeff"))
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.ToLower(strings.TrimSpace(parts[0]))
-		value := strings.TrimSpace(parts[1])
-		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'')) {
-			value = value[1 : len(value)-1]
-		}
-		config[key] = value
-	}
-	return config
-}
-
-func targetType(path string) string {
-	value := strings.TrimSpace(readTargetConfig(path)["type"])
+func targetType(Context structures.Context, path string) string {
+	value := Context.Config(path).Type()
 	if value == "" {
 		return "none"
 	}
 	return value
 }
 
-func targetMarker(path string) string {
-	for _, name := range []string{".iasi.yml", "_iasi.yml"} {
-		marker := filepath.Join(path, name)
-		if info, err := os.Stat(marker); err == nil && !info.IsDir() {
-			return marker
-		}
-	}
-	return ""
-}
-
-// discoverIASITargets recursively finds directories containing a ?iasi.yml marker.
-func discoverIASITargets(Parms *structures.Parms, path string) {
-	if isExcluded(Parms, filepath.Base(path)) {
+func discoverIASITargets(Context *structures.Context, path string) {
+	if isExcluded(Context, filepath.Base(path)) {
 		return
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		cli.Warning(*Parms, "Se ignora %q: no se puede leer.", path)
+		cli.Warning(*Context, "Se ignora %q: no se puede leer.", path)
 		return
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() && isIASIMarker(entry.Name()) {
-			Parms.Targets = append(Parms.Targets, filepath.Clean(path))
-			break
-		}
-	}
+	hasTOML := false
+	hasQuarto := false
+	legacy := []string{}
 
 	for _, entry := range entries {
-		if !entry.IsDir() || isExcluded(Parms, entry.Name()) {
+		if entry.IsDir() {
 			continue
 		}
-		discoverIASITargets(Parms, filepath.Join(path, entry.Name()))
+
+		switch {
+		case strings.EqualFold(entry.Name(), iasiconfig.FileName):
+			hasTOML = true
+		case strings.EqualFold(entry.Name(), "_quarto.yml"):
+			hasQuarto = true
+		default:
+			for _, name := range iasiconfig.LegacyFileNames {
+				if strings.EqualFold(entry.Name(), name) {
+					legacy = append(legacy, entry.Name())
+					break
+				}
+			}
+		}
+	}
+
+	if hasTOML {
+		Context.Targets = append(Context.Targets, filepath.Clean(path))
+
+		if len(legacy) != 0 {
+			cli.Attention(
+				*Context,
+				"Multiple IASI configuration files found in: %s. Using iasi.toml; legacy files: %s",
+				path,
+				strings.Join(legacy, ", "),
+			)
+		}
+	} else if len(legacy) != 0 || hasQuarto {
+		cli.Attention(*Context, "Missing iasi.toml in: %s", path)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() || isExcluded(Context, entry.Name()) {
+			continue
+		}
+		discoverIASITargets(Context, filepath.Join(path, entry.Name()))
 	}
 }
 
-func isIASIMarker(name string) bool {
-	matched, _ := filepath.Match("?iasi.yml", strings.ToLower(name))
-	return matched
-}
-
-// discoverRepos recursively discovers Git repositories below path.
-func discoverRepos(Parms *structures.Parms, path string) {
-	if isExcluded(Parms, filepath.Base(path)) {
+func discoverRepos(Context *structures.Context, path string) {
+	if isExcluded(Context, filepath.Base(path)) {
 		return
 	}
 
 	if tools.IsRepo(path) {
-		Parms.Repos = append(Parms.Repos, filepath.Clean(path))
+		Context.Repos = append(Context.Repos, filepath.Clean(path))
 		return
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		cli.Warning(*Parms, "Se ignora %q: no se puede leer.", path)
+		cli.Warning(*Context, "Se ignora %q: no se puede leer.", path)
 		return
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() || isExcluded(Parms, entry.Name()) {
+		if !entry.IsDir() || isExcluded(Context, entry.Name()) {
 			continue
 		}
-		discoverRepos(Parms, filepath.Join(path, entry.Name()))
+		discoverRepos(Context, filepath.Join(path, entry.Name()))
 	}
 }
 
-func isExcluded(Parms *structures.Parms, name string) bool {
-	for _, exclusion := range Parms.Exclusions {
+func isExcluded(Context *structures.Context, name string) bool {
+	for _, exclusion := range Context.Exclusions {
 		if name == exclusion {
 			return true
 		}

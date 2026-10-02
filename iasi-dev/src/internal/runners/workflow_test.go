@@ -107,12 +107,10 @@ func TestWorkflowTargetParmsExposeExactlyOneProject(t *testing.T) {
 	repository := filepath.Join("C:", "iasi-org-dev", "repo-a")
 	first := structures.Target{
 		Path:       filepath.Join(repository, "project-1"),
-		Type:       "quarto",
 		Repository: repository,
 	}
 	second := structures.Target{
 		Path:       filepath.Join(repository, "project-2"),
-		Type:       "quarto",
 		Repository: repository,
 	}
 
@@ -122,6 +120,10 @@ func TestWorkflowTargetParmsExposeExactlyOneProject(t *testing.T) {
 		TargetDetails: []structures.Target{first, second},
 		BlackList:     []string{"some-other-repository"},
 		LastRC:        RC.Warning,
+		Configs: map[string]structures.Config{
+			filepath.Clean(first.Path):  {IASI: map[string]any{"type": "quarto"}},
+			filepath.Clean(second.Path): {IASI: map[string]any{"type": "quarto"}},
+		},
 	}
 
 	targetParms := workflowTargetParms(parms, repository, second)
@@ -147,8 +149,10 @@ func TestWorkflowTargetParmsExposeExactlyOneProject(t *testing.T) {
 	if targetParms.LastRC != RC.OK {
 		t.Fatalf("LastRC = 0x%X, want 0x%X", targetParms.LastRC, RC.OK)
 	}
+	if targetParms.Config(second.Path).Type() != "quarto" {
+		t.Fatalf("target config was not preserved")
+	}
 
-	// The source parameter set must remain untouched.
 	if len(parms.TargetDetails) != 2 || len(parms.Targets) != 2 || len(parms.BlackList) != 1 {
 		t.Fatalf("source parameters were modified: %+v", parms)
 	}

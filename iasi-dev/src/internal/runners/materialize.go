@@ -13,8 +13,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Materialize recreates an organization workspace in destination without carrying Git history.
-// Unless -l is active, the materialized organization is then published through its remotes.
 func Materialize(Parms *structures.Parms) []string {
 	repositories := materializeLocal(Parms)
 	if len(repositories) == 0 || Parms.Local {
@@ -25,8 +23,6 @@ func Materialize(Parms *structures.Parms) []string {
 	return push(Parms)
 }
 
-// materializeLocal performs only the local materialization transaction.
-// Publication is deliberately a separate primitive so workflows can compose both stages.
 func materializeLocal(Parms *structures.Parms) []string {
 	if Parms.MaterializeDestination == "" {
 		cli.Error(RC.Error, *Parms, "materialize requiere un destino.")
@@ -117,7 +113,6 @@ func prepareMaterializeTemporary(temporary string) error {
 	return os.MkdirAll(temporary, 0755)
 }
 
-// materializeCopy copies the current working tree but deliberately omits Git metadata.
 func materializeCopy(source string, destination string) error {
 	return filepath.WalkDir(source, func(path string, item os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -189,8 +184,6 @@ func materializeCommitMessage(Parms *structures.Parms) string {
 	return "IASI materialization"
 }
 
-// materializeReplace swaps the complete destination transactionally. If the final rename fails,
-// the previous destination is restored from the sibling backup.
 func materializeReplace(temporary string, destination string) error {
 	backup := materializeBackup(destination)
 	if err := os.RemoveAll(backup); err != nil {

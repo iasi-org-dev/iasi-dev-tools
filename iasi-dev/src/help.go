@@ -4,7 +4,7 @@ import "iasi-dev/internal/cli"
 
 func printHelp() {
 	cli.Direct(`IASI Dev
-	
+
 	Usage:
 	  iasi-dev <command> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
 	  iasi-dev workflow <build|publish|release> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
@@ -15,7 +15,7 @@ func printHelp() {
 	  iasi-dev restore [vMAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
 	  iasi-dev materialize [-l] <destination> [source] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev version [vMAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	
+
 	Commands:
 	  help         Show help
 	  build        Build discovered IASI targets through their configured builders
@@ -30,13 +30,13 @@ func printHelp() {
 	  workflow     Run a development workflow
 	  sync         Sync shared files from iasi-common
 	  version      Show VERSION or explicitly set the organization version
-	
+
 	Workflows:
 	  build        Build and commit
 	  publish      Publish and commit; optionally include previous stages with -a
 	  release      Release and commit; optionally include previous stages with -a
 	  promote      Freeze current VERSION, advance development to --version, then promote the frozen VERSION; -l creates missing destination repositories without synchronizing contents
-	
+
 	Options:
 	  -h         Show help.
 	  -s         Silent output.
@@ -51,7 +51,7 @@ func printHelp() {
 	  -m         Show the fully prepared execution and stop before running the command.
 	  -M         Dry-run: show the prepared execution and external commands without executing them.
 	  -t         Continue when an operation fails.
-	
+
 	Parameters:
 	  --path value               Change to this directory before resolving projects and relative paths.
 	  --exclude value[,value]*  Add exclusions. Existing files are read one exclusion per line; .git, .github and tests are always excluded.

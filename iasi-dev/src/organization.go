@@ -13,102 +13,96 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// prepareParms discovers the effective repositories, resolves the organization and loads its VERSION.
-func prepareParms(command string, Parms *structures.Parms) {
+func prepareParms(command string, Context *structures.Context) {
 	if command == "promote-check" {
-		preparePromotePaths(Parms)
-		commands.SetDryRun(Parms.DryRun)
+		preparePromotePaths(Context)
+		commands.SetDryRun(Context.DryRun)
 		return
 	}
 
 	if command == "promote" {
-		preparePromotePaths(Parms)
-		Parms.Targets = []string{Parms.SourcePath}
-		args.Prepare(Parms)
-		preparePromoteOrganizations(Parms)
-		commands.SetDryRun(Parms.DryRun)
+		preparePromotePaths(Context)
+		Context.Targets = []string{Context.SourcePath}
+		args.Prepare(Context)
+		preparePromoteOrganizations(Context)
+		commands.SetDryRun(Context.DryRun)
 		return
 	}
 
-	if command == "workflow" && Parms.Subcommand == "promote" {
-		preparePromotePaths(Parms)
-		Parms.Targets = []string{Parms.SourcePath}
-		args.Prepare(Parms)
-		preparePromoteOrganizations(Parms)
-		loadOrganizationVersion(Parms)
-		commands.SetDryRun(Parms.DryRun)
+	if command == "workflow" && Context.Subcommand == "promote" {
+		preparePromotePaths(Context)
+		Context.Targets = []string{Context.SourcePath}
+		args.Prepare(Context)
+		preparePromoteOrganizations(Context)
+		loadOrganizationVersion(Context)
+		commands.SetDryRun(Context.DryRun)
 		return
 	}
 
-	args.Prepare(Parms)
-	prepareOrganization(Parms)
-	if !isVersionWrite(command, Parms) {
-		loadOrganizationVersion(Parms)
+	args.Prepare(Context)
+	prepareOrganization(Context)
+	if !isVersionWrite(command, Context) {
+		loadOrganizationVersion(Context)
 	}
 
-	// Check modes become effective only after the real preparation has completed.
-	commands.SetDryRun(Parms.DryRun)
+	commands.SetDryRun(Context.DryRun)
 }
 
-// preparePromoteOrganizations derives promotion organization names from the explicit workspace paths.
-func preparePromoteOrganizations(Parms *structures.Parms) {
-	source := filepath.Base(filepath.Clean(Parms.SourcePath))
-	destination := filepath.Base(filepath.Clean(Parms.DestinationPath))
+func preparePromoteOrganizations(Context *structures.Context) {
+	source := filepath.Base(filepath.Clean(Context.SourcePath))
+	destination := filepath.Base(filepath.Clean(Context.DestinationPath))
 	if source == "" || source == "." {
-		cli.Error(RC.Error, *Parms, "No se puede deducir la organización origen desde %s.", Parms.SourcePath)
+		cli.Error(RC.Error, *Context, "No se puede deducir la organización origen desde %s.", Context.SourcePath)
 	}
 	if destination == "" || destination == "." {
-		cli.Error(RC.Error, *Parms, "No se puede deducir la organización destino desde %s.", Parms.DestinationPath)
+		cli.Error(RC.Error, *Context, "No se puede deducir la organización destino desde %s.", Context.DestinationPath)
 	}
 
-	Parms.Organization = source
-	Parms.SourceOrganization = source
-	Parms.DestinationOrganization = destination
+	Context.Organization = source
+	Context.SourceOrganization = source
+	Context.DestinationOrganization = destination
 }
 
-func isVersionWrite(command string, Parms *structures.Parms) bool {
-	return command == "version" && Parms.TargetVersion != ""
+func isVersionWrite(command string, Context *structures.Context) bool {
+	return command == "version" && Context.TargetVersion != ""
 }
 
-// prepareOrganization keeps an explicit organization or deduces one from the discovered Git origins.
-func prepareOrganization(Parms *structures.Parms) {
-	if Parms.Organization != "" {
+func prepareOrganization(Context *structures.Context) {
+	if Context.Organization != "" {
 		return
 	}
-	if len(Parms.Repos) == 0 {
-		cli.Error(RC.Error, *Parms, "No se puede deducir la organización: no se han descubierto repositorios Git.")
+	if len(Context.Repos) == 0 {
+		cli.Error(RC.Error, *Context, "No se puede deducir la organización: no se han descubierto repositorios Git.")
 	}
 
 	organization := ""
-	for _, repository := range Parms.Repos {
-		candidate := repositoryOrganization(Parms, repository)
+	for _, repository := range Context.Repos {
+		candidate := repositoryOrganization(Context, repository)
 		if organization == "" {
 			organization = candidate
 			continue
 		}
 		if candidate != organization {
-			cli.Error(RC.Error, *Parms, "Los repositorios descubiertos pertenecen a organizaciones distintas: %q y %q.", organization, candidate)
+			cli.Error(RC.Error, *Context, "Los repositorios descubiertos pertenecen a organizaciones distintas: %q y %q.", organization, candidate)
 		}
 	}
 
-	Parms.Organization = organization
+	Context.Organization = organization
 }
 
-// repositoryOrganization returns the GitHub organization owning repository's origin remote.
-func repositoryOrganization(Parms *structures.Parms, repository string) string {
-	result := commands.Run(repository, Parms.LogFile, "git", "remote", "get-url", "origin")
+func repositoryOrganization(Context *structures.Context, repository string) string {
+	result := commands.Run(repository, Context.LogFile, "git", "remote", "get-url", "origin")
 	if result.RC != RC.OK {
-		cli.Error(RC.Error, *Parms, "No se puede leer origin de %s: %s", repository, organizationCommandError(result))
+		cli.Error(RC.Error, *Context, "No se puede leer origin de %s: %s", repository, organizationCommandError(result))
 	}
 
 	organization := githubOrganization(strings.TrimSpace(result.Stdout))
 	if organization == "" {
-		cli.Error(RC.Error, *Parms, "No se puede deducir una organización GitHub de origin en %s: %q", repository, strings.TrimSpace(result.Stdout))
+		cli.Error(RC.Error, *Context, "No se puede deducir una organización GitHub de origin en %s: %q", repository, strings.TrimSpace(result.Stdout))
 	}
 	return organization
 }
 
-// githubOrganization extracts the owner from common github.com remote URL forms.
 func githubOrganization(remote string) string {
 	remote = strings.TrimSpace(remote)
 	if remote == "" {
@@ -141,20 +135,18 @@ func firstPathPart(path string) string {
 	return parts[0]
 }
 
-// loadOrganizationVersion loads VERSION from the resolved GitHub organization.
-// Failure is fatal because this call is also the common GitHub connectivity/authentication checkpoint.
-func loadOrganizationVersion(Parms *structures.Parms) {
-	result := commands.Run(".", Parms.LogFile, "gh", "variable", "get", consts.OrganizationVersionVariable, "--org", Parms.Organization)
+func loadOrganizationVersion(Context *structures.Context) {
+	result := commands.Run(".", Context.LogFile, "gh", "variable", "get", consts.OrganizationVersionVariable, "--org", Context.Organization)
 	if result.RC != RC.OK {
-		cli.Error(RC.Error, *Parms, "No se pudo leer %s de %s: %s", consts.OrganizationVersionVariable, Parms.Organization, organizationCommandError(result))
+		cli.Error(RC.Error, *Context, "No se pudo leer %s de %s: %s", consts.OrganizationVersionVariable, Context.Organization, organizationCommandError(result))
 	}
 
 	version := strings.TrimSpace(result.Stdout)
 	if version == "" {
-		cli.Error(RC.Error, *Parms, "%s de %s está vacía.", consts.OrganizationVersionVariable, Parms.Organization)
+		cli.Error(RC.Error, *Context, "%s de %s está vacía.", consts.OrganizationVersionVariable, Context.Organization)
 	}
 
-	Parms.Version = version
+	Context.Version = version
 }
 
 func organizationCommandError(result structures.Result) string {

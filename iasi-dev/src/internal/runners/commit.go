@@ -11,7 +11,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Commit commits the selected repositories and returns the targets that remain active.
 func Commit(Parms *structures.Parms, depth int) []string {
 	if Parms.Debug {
 		fmt.Printf("Commit: repos=%v blackList=%v\n", Parms.Repos, Parms.BlackList)
@@ -42,11 +41,7 @@ func commitRepository(repository string, Parms *structures.Parms, depth int) int
 	}
 
 	rc := changesPending(repository, *Parms)
-	if rc == RC.NothingToDo {
-		// Do not return here. A clean working tree does not mean there is
-		// nothing to push: local commits may still be ahead of the remote.
-		// return rc
-	} else {
+	if rc != RC.NothingToDo {
 		if handleRC(Parms, rc) == RC.Skip {
 			return RC.Skip
 		}
@@ -85,17 +80,11 @@ func commitRepository(repository string, Parms *structures.Parms, depth int) int
 }
 
 func changesPending(repository string, Parms structures.Parms) int {
-	if Parms.Debug {
-		fmt.Printf("changesPending: repository=%s\n", repository)
-	}
 	result := commands.RunFriendly(repository, Parms.LogFile, "git", "status")
 	return result.RC
 }
 
 func addChanges(repository string, Parms structures.Parms) int {
-	if Parms.Debug {
-		fmt.Printf("addChanges: repository=%s\n", repository)
-	}
 	result := commands.RunLogged(repository, Parms.LogFile, "git", "add", "-A", ".")
 	if result.RC != RC.OK {
 		return RC.Fatal
@@ -104,9 +93,6 @@ func addChanges(repository string, Parms structures.Parms) int {
 }
 
 func commitChanges(repository string, Parms structures.Parms) int {
-	if Parms.Debug {
-		fmt.Printf("commitChanges: repository=%s message=%q\n", repository, Parms.Message)
-	}
 	result := commands.RunLogged(repository, Parms.LogFile, "git", "commit", "-m", Parms.Message)
 	if result.RC != RC.OK {
 		return RC.Fatal
@@ -115,10 +101,6 @@ func commitChanges(repository string, Parms structures.Parms) int {
 }
 
 func pushChanges(repository string, Parms structures.Parms) int {
-	if Parms.Debug {
-		fmt.Printf("pushChanges: repository=%s organization=%s\n", repository, Parms.Organization)
-	}
-
 	args := pushChangesArguments(Parms.Organization)
 	result := commands.RunLogged(repository, Parms.LogFile, "git", args...)
 	if result.RC != RC.OK {
@@ -127,9 +109,6 @@ func pushChanges(repository string, Parms structures.Parms) int {
 	return RC.OK
 }
 
-// pushChangesArguments preserves development history in *-dev organizations.
-// Stable organizations are materialized from development and therefore replace
-// the remote main branch with the promoted snapshot.
 func pushChangesArguments(organization string) []string {
 	organization = strings.TrimSpace(strings.ToLower(organization))
 	if organization == "" || strings.HasSuffix(organization, "-dev") {

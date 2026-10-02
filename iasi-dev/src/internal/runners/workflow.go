@@ -9,9 +9,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// Workflow executes repository workflows one repository at a time.
-// Within each repository, targets execute their complete workflow one at a time.
-// Promote is organization-wide and therefore runs once with the complete repository set.
 func Workflow(Parms *structures.Parms) {
 	if Parms.Subcommand == "promote" {
 		workflowPromote(Parms)
@@ -27,12 +24,6 @@ func Workflow(Parms *structures.Parms) {
 	}
 }
 
-// workflowRepository executes the requested workflow target by target.
-//
-// This deliberately restores the original workflow semantics: one project
-// completes its lifecycle before the next project starts. A tolerated failure
-// invalidates the repository for the final commit/push, but does not prevent
-// sibling targets in the same repository from being processed.
 func workflowRepository(repository string, Parms *structures.Parms, depth int) {
 	if isBlackListed(*Parms, repository) {
 		return
@@ -47,9 +38,6 @@ func workflowRepository(repository string, Parms *structures.Parms, depth int) {
 
 		targetParms := workflowTargetParms(*Parms, repository, target)
 
-		// Once one target has failed, keep processing sibling targets in tolerant
-		// mode but do not create later checkpoints for a repository that is
-		// already known to be invalid.
 		if repositoryFailed {
 			targetParms.Checkpoints = false
 		}
@@ -65,9 +53,6 @@ func workflowRepository(repository string, Parms *structures.Parms, depth int) {
 			cli.Error(RC.Error, targetParms, "Workflow desconocido: %q", targetParms.Subcommand)
 		}
 
-		// A target for which the workflow does not apply is transparent. In
-		// particular, repository/none targets must not contaminate the global
-		// result merely because their build returns NothingToDo.
 		if RC.Result(targetParms.LastRC) == RC.NothingToDo &&
 			len(targetParms.Repos) == 0 &&
 			!isBlackListed(targetParms, repository) {
@@ -95,16 +80,11 @@ func workflowRepository(repository string, Parms *structures.Parms, depth int) {
 		addToBlackList(Parms, repository)
 	}
 
-	// Without checkpoints, commit/push once after every valid target in the
-	// repository has completed. With checkpoints, the stage workflows already
-	// performed the requested commits.
 	if repositoryActive && !Parms.Checkpoints {
 		Parms.Repos = Commit(Parms, depth+1)
 	}
 }
 
-// workflowRepositoryTargets returns the discovered targets that belong to one
-// repository, preserving discovery order.
 func workflowRepositoryTargets(Parms structures.Parms, repository string) []structures.Target {
 	targets := []structures.Target{}
 
@@ -118,9 +98,6 @@ func workflowRepositoryTargets(Parms structures.Parms, repository string) []stru
 	return targets
 }
 
-// workflowTargetParms creates the single-target view used by workflows.
-// The cumulative RC and log handle remain shared; selection and blacklist are
-// isolated so one tolerated target failure cannot hide its sibling targets.
 func workflowTargetParms(Parms structures.Parms, repository string, target structures.Target) structures.Parms {
 	targetParms := Parms
 	targetParms.Repos = []string{repository}
@@ -131,7 +108,6 @@ func workflowTargetParms(Parms structures.Parms, repository string, target struc
 	return targetParms
 }
 
-// workflowBuild builds and commits when standalone or used as a checkpoint.
 func workflowBuild(standalone bool, Parms *structures.Parms, depth int) {
 	Parms.LastRC = RC.OK
 	Parms.Repos = Build(Parms, depth)
@@ -144,7 +120,6 @@ func workflowBuild(standalone bool, Parms *structures.Parms, depth int) {
 	}
 }
 
-// workflowPublish optionally builds first, publishes and commits when required.
 func workflowPublish(standalone bool, Parms *structures.Parms, depth int) {
 	if Parms.All {
 		workflowBuild(false, Parms, depth)
@@ -165,7 +140,6 @@ func workflowPublish(standalone bool, Parms *structures.Parms, depth int) {
 	}
 }
 
-// workflowRelease optionally runs previous stages, releases and commits when required.
 func workflowRelease(standalone bool, Parms *structures.Parms, depth int) {
 	if Parms.All {
 		workflowPublish(false, Parms, depth)
@@ -186,9 +160,6 @@ func workflowRelease(standalone bool, Parms *structures.Parms, depth int) {
 	}
 }
 
-// workflowRunStage executes one workflow stage. When -a is active, a stage that
-// does not apply to the current repository is transparent: the repository and
-// accumulated result from the preceding stage are preserved.
 func workflowRunStage(Parms *structures.Parms, runner func(*structures.Parms) []string, optional bool) {
 	repositories := append([]string{}, Parms.Repos...)
 	rc := RC.Value(Parms.RC)
@@ -205,8 +176,6 @@ func workflowRunStage(Parms *structures.Parms, runner func(*structures.Parms) []
 	}
 }
 
-// workflowPromote closes the current development version, advances development
-// to the requested next version, and promotes the frozen snapshot to destination.
 func workflowPromote(Parms *structures.Parms) {
 	frozenVersion := strings.TrimSpace(Parms.Version)
 	nextVersion := strings.TrimSpace(Parms.NextVersion)
@@ -235,7 +204,6 @@ func workflowPromote(Parms *structures.Parms) {
 	Parms.Repos = Promote(&promoteParms)
 }
 
-// workflowOrganizationRoot finds the common parent containing the organization's repositories.
 func workflowOrganizationRoot(repositories []string) string {
 	if len(repositories) == 0 {
 		return ""
@@ -263,13 +231,10 @@ func workflowPathContains(parent string, child string) bool {
 	return relative == "." || (relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)))
 }
 
-// workflowContinuesAfterBuild reports whether later workflow stages apply.
-// NothingToDo means build succeeded but found no buildable IASI project.
 func workflowContinuesAfterBuild(rc int) bool {
 	return RC.Result(rc) != RC.NothingToDo
 }
 
-// workflowName returns the display name of a workflow.
 func workflowName(name string) string {
 	switch name {
 	case "build":

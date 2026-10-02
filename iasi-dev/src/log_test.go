@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,131 +22,44 @@ func TestCreateLogFileUsesRequestedDirectory(t *testing.T) {
 	}
 }
 
-func TestLogParmsIncludesPreparedListsAndModes(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "parms.log")
+func TestLogContextWritesTargetTreeFromCanonicalConfigs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "context.log")
 	logFile, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	Parms := structures.Parms{
-		PrepareOnly:      true,
-		DryRun:           false,
-		LogDir:           "trace",
-		RequestedTargets: []string{"."},
-		Targets:          []string{"/workspace"},
-		Repos:            []string{"/workspace/repo"},
-		Exclusions:       []string{".git", "tests"},
-		LogFile:          logFile,
-	}
-	logParms(Parms)
-	if err := logFile.Close(); err != nil {
-		t.Fatal(err)
-	}
+	repo := filepath.Join("root", "iasi-dev-tools")
+	dev := filepath.Join(repo, "iasi-dev")
+	guide := filepath.Join(dev, "docs", "01-user-guide")
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(content)
-	for _, want := range []string{
-		"PrepareOnly: true",
-		"DryRun: false",
-		`LogDir: "trace"`,
-		"RequestedTargets:\n  - .",
-		"Targets:\n  workspace [none]",
-		"Repos:\n  - /workspace/repo",
-	} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("log does not contain %q:\n%s", want, text)
-		}
-	}
-}
-
-func TestLogParmsPrepareOnlyMirrorsPreparedData(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "parms.log")
-	logFile, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer logFile.Close()
-
-	read, write, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer read.Close()
-
-	old := os.Stdout
-	os.Stdout = write
-	defer func() { os.Stdout = old }()
-
-	Parms := structures.Parms{PrepareOnly: true, RequestedTargets: []string{"."}, Targets: []string{"/workspace"}, Repos: []string{"/workspace/repo"}, LogFile: logFile}
-	logParms(Parms)
-	if err := write.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	console, err := io.ReadAll(read)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(console), "RequestedTargets:\n  - .") {
-		t.Fatalf("prepare-only output missing requested targets: %q", string(console))
-	}
-	if !strings.Contains(string(console), "Repos:\n  - /workspace/repo") {
-		t.Fatalf("prepare-only output missing repos: %q", string(console))
-	}
-}
-
-func TestLogParmsWithoutCheckModeDoesNotMirror(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "parms.log")
-	logFile, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer logFile.Close()
-
-	read, write, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer read.Close()
-
-	old := os.Stdout
-	os.Stdout = write
-	defer func() { os.Stdout = old }()
-
-	logParms(structures.Parms{Targets: []string{"/workspace"}, LogFile: logFile})
-	if err := write.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	console, err := io.ReadAll(read)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(console) != 0 {
-		t.Fatalf("normal execution mirrored parms: %q", string(console))
-	}
-}
-
-func TestLogParmsWritesTargetTree(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "parms.log")
-	logFile, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	Parms := structures.Parms{
+	context := structures.Context{
 		TargetDetails: []structures.Target{
-			{Path: filepath.Join("root", "iasi-dev-tools"), Type: "repository", Depth: 0},
-			{Path: filepath.Join("root", "iasi-dev-tools", "iasi-dev"), Type: "r", Depth: 1},
-			{Path: filepath.Join("root", "iasi-dev-tools", "iasi-dev", "docs", "01-user-guide"), Type: "quarto", Depth: 2},
+			{Path: repo, Depth: 0},
+			{Path: dev, Depth: 1},
+			{Path: guide, Depth: 2},
+		},
+		Configs: map[string]structures.Config{
+			filepath.Clean(repo): {IASI: map[string]any{"type": "repository"}},
+			filepath.Clean(dev): {IASI: map[string]any{
+				"type": "software",
+				"software": map[string]any{
+					"builder": "go",
+					"input-dir": "src",
+				},
+			}},
+			filepath.Clean(guide): {IASI: map[string]any{
+				"type": "quarto",
+				"publication": map[string]any{
+					"strategy": "outlined",
+					"numbered": true,
+				},
+			}},
 		},
 		LogFile: logFile,
 	}
-	logParms(Parms)
+
+	logParms(context)
 	if err := logFile.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -156,8 +68,24 @@ func TestLogParmsWritesTargetTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "Targets:\n  iasi-dev-tools [repository]\n    iasi-dev [r]\n      01-user-guide [quarto]\n"
-	if !strings.Contains(string(data), want) {
-		t.Fatalf("target tree missing:\n%s", string(data))
+	text := string(data)
+
+	for _, want := range []string{
+		"--- CONTEXT",
+		"iasi-dev-tools [repository]",
+		"iasi-dev [software]",
+		"01-user-guide [quarto]",
+		"Configs:",
+		"type: \"repository\"",
+		"software:",
+		"builder: \"go\"",
+		"input-dir: \"src\"",
+		"publication:",
+		"strategy: \"outlined\"",
+		"numbered: true",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("log does not contain %q:\n%s", want, text)
+		}
 	}
 }

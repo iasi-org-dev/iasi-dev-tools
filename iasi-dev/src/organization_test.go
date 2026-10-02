@@ -2,20 +2,15 @@ package main
 
 import "testing"
 
-func TestGithubOrganizationFromHTTPS(t *testing.T) {
-	if got := githubOrganization("https://github.com/iasi-org-dev/iasi-quarto.git"); got != "iasi-org-dev" {
-		t.Fatalf("organization = %q, want iasi-org-dev", got)
+func TestGithubOrganization(t *testing.T) {
+	tests := map[string]string{
+		"https://github.com/iasi-org-dev/iasi-r.git": "iasi-org-dev",
+		"git@github.com:iasi-org/iasi-r.git":          "iasi-org",
+		"https://gitlab.com/iasi-org/iasi-r.git":     "",
 	}
-}
-
-func TestGithubOrganizationFromSCPSSH(t *testing.T) {
-	if got := githubOrganization("git@github.com:iasi-org/iasi-quarto.git"); got != "iasi-org" {
-		t.Fatalf("organization = %q, want iasi-org", got)
-	}
-}
-
-func TestGithubOrganizationRejectsNonGithubRemote(t *testing.T) {
-	if got := githubOrganization("https://gitlab.com/iasi-org/iasi-quarto.git"); got != "" {
-		t.Fatalf("organization = %q, want empty", got)
+	for remote, want := range tests {
+		if got := githubOrganization(remote); got != want {
+			t.Fatalf("githubOrganization(%q) = %q, want %q", remote, got, want)
+		}
 	}
 }

@@ -30,8 +30,6 @@ type promoteCheckHit struct {
 	matches []string
 }
 
-// PromoteCheck scans the promotion destination for references to the source that may require postprocessing.
-// It never modifies the source, destination or Git repositories.
 func PromoteCheck(Parms *structures.Parms) []string {
 	requireTargetVersion(Parms, "promote-check")
 	if _, ok := parseSemanticVersion(Parms.TargetVersion); !ok {
@@ -169,7 +167,6 @@ func promoteCheckScan(root string, patterns []promoteCheckPattern) ([]promoteChe
 	})
 	return hits, skipped, nil
 }
-
 
 func promoteCheckExcludedRepository(root string, path string, name string) bool {
 	if strings.EqualFold(filepath.Clean(path), filepath.Clean(root)) {

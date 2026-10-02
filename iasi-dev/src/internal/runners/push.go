@@ -7,9 +7,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// push publishes the materialized organization through each repository's origin remote.
-// Materialized repositories intentionally have new Git histories, so publication replaces
-// the remote main branch rather than attempting to merge unrelated histories.
 func push(Parms *structures.Parms) []string {
 	if len(Parms.Repos) == 0 {
 		cli.Error(RC.Error, *Parms, "No se encontraron repositorios para publicar.")

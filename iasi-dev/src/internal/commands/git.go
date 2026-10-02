@@ -9,7 +9,6 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-// commandGit executes Git using friendly semantics when requested.
 func commandGit(directory string, friendly bool, logFile *os.File, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("commandGit: directory=%s friendly=%t args=%v\n", directory, friendly, args)
@@ -21,7 +20,6 @@ func commandGit(directory string, friendly bool, logFile *os.File, args ...strin
 	return command(directory, false, logFile, "git", args...)
 }
 
-// commandGitFriendly executes Git with command-specific friendly semantics when available.
 func commandGitFriendly(directory string, logFile *os.File, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("commandGitFriendly: directory=%s args=%v\n", directory, args)
@@ -38,7 +36,6 @@ func commandGitFriendly(directory string, logFile *os.File, args ...string) stru
 	}
 }
 
-// commandGitStatus checks whether the repository has pending changes.
 func commandGitStatus(directory string, logFile *os.File, args ...string) structures.Result {
 	if debug {
 		fmt.Printf("commandGitStatus: directory=%s args=%v\n", directory, args)

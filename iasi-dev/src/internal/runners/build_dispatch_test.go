@@ -11,11 +11,21 @@ import (
 	"iasi-dev/internal/structures"
 )
 
-func TestDispatchBuildRoutesDocumentTypesToSameRBuilder(t *testing.T) {
+func testContextForTarget(path string, typ string) structures.Context {
+	rc := RC.OK
+	return structures.Context{
+		RC: &rc,
+		Configs: map[string]structures.Config{
+			filepath.Clean(path): {IASI: map[string]any{"type": typ}},
+		},
+	}
+}
+
+func TestDispatchBuildRoutesCanonicalRTypesToSameRBuilder(t *testing.T) {
 	commands.SetDryRun(true)
 	defer commands.SetDryRun(false)
 
-	for _, targetType := range []string{"quarto", "book", "guide", "website"} {
+	for _, targetType := range []string{"quarto", "website", "r-package"} {
 		t.Run(targetType, func(t *testing.T) {
 			root := t.TempDir()
 			logPath := filepath.Join(root, "build.log")
@@ -24,10 +34,12 @@ func TestDispatchBuildRoutesDocumentTypesToSameRBuilder(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			target := structures.Target{Path: root, Type: targetType}
-			parms := structures.Parms{DryRun: true, LogFile: logFile}
+			target := structures.Target{Path: root}
+			context := testContextForTarget(root, targetType)
+			context.DryRun = true
+			context.LogFile = logFile
 
-			if rc := dispatchBuild(target, parms, 0); rc != RC.OK {
+			if rc := dispatchBuild(target, context, 0); rc != RC.OK {
 				_ = logFile.Close()
 				t.Fatalf("dispatchBuild(%s) RC = %d, want %d", targetType, rc, RC.OK)
 			}
@@ -47,61 +59,32 @@ func TestDispatchBuildRoutesDocumentTypesToSameRBuilder(t *testing.T) {
 	}
 }
 
-func TestDispatchBuildRoutesSoftwareToIASIScript(t *testing.T) {
-	commands.SetDryRun(true)
-	defer commands.SetDryRun(false)
+func TestDispatchBuildRejectsHistoricalBookAndGuideTypes(t *testing.T) {
+	for _, targetType := range []string{"book", "guide", "r"} {
+		root := t.TempDir()
+		target := structures.Target{Path: root}
+		context := testContextForTarget(root, targetType)
 
-	root := t.TempDir()
-	logPath := filepath.Join(root, "build.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	target := structures.Target{Path: root, Type: "software", Builder: "iasi-script"}
-	parms := structures.Parms{DryRun: true, LogFile: logFile}
-
-	if rc := dispatchBuild(target, parms, 0); rc != RC.OK {
-		_ = logFile.Close()
-		t.Fatalf("dispatchBuild(software:iasi-script) RC = %d, want %d", rc, RC.OK)
-	}
-	if err := logFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(data), "Command ["+root+"]: iasi-script") {
-		t.Fatalf("iasi-script command missing: %q", string(data))
+		if rc := dispatchBuild(target, context, 0); rc != RC.NothingToDo {
+			t.Fatalf("dispatchBuild(%s) RC = %d, want %d", targetType, rc, RC.NothingToDo)
+		}
 	}
 }
 
-func TestDispatchBuildNothingToDoIsSilent(t *testing.T) {
+func TestDispatchBuildDoesNotSupportIASIScript(t *testing.T) {
 	root := t.TempDir()
-	logPath := filepath.Join(root, "build.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		t.Fatal(err)
+	target := structures.Target{Path: root}
+	context := testContextForTarget(root, "software")
+	context.Configs[filepath.Clean(root)] = structures.Config{
+		IASI: map[string]any{
+			"type": "software",
+			"software": map[string]any{
+				"builder": "iasi-script",
+			},
+		},
 	}
 
-	target := structures.Target{Path: filepath.Join(root, "mystery"), Type: "software", Builder: "unknown"}
-	parms := structures.Parms{LogFile: logFile}
-
-	if rc := dispatchBuild(target, parms, 0); rc != RC.NothingToDo {
-		_ = logFile.Close()
-		t.Fatalf("dispatchBuild unsupported RC = %d, want %d", rc, RC.NothingToDo)
-	}
-	if err := logFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.TrimSpace(string(data)) != "" {
-		t.Fatalf("NothingToDo wrote to the log: %q", string(data))
+	if rc := dispatchBuild(target, context, 0); rc != RC.NothingToDo {
+		t.Fatalf("dispatchBuild(software:iasi-script) RC = %d, want %d", rc, RC.NothingToDo)
 	}
 }
