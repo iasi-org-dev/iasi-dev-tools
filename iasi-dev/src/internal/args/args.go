@@ -408,6 +408,7 @@ func processTargets(Context *structures.Context) {
 	Context.TargetDetails = nil
 	Context.Repos = []string{}
 	Context.BlackList = []string{}
+	Context.Diagnostics = nil
 	Context.Configs = map[string]structures.Config{}
 
 	for _, root := range roots {
@@ -557,15 +558,16 @@ func discoverIASITargets(Context *structures.Context, path string) {
 		Context.Targets = append(Context.Targets, filepath.Clean(path))
 
 		if len(legacy) != 0 {
-			cli.Attention(
-				*Context,
-				"Multiple IASI configuration files found in: %s. Using iasi.toml; legacy files: %s",
-				path,
-				strings.Join(legacy, ", "),
-			)
+			Context.Diagnostics = append(Context.Diagnostics, structures.Diagnostic{
+				Path: filepath.Clean(path),
+				Message: "Multiple IASI configuration files found in: " + path + ". Using iasi.toml; legacy files: " + strings.Join(legacy, ", "),
+			})
 		}
 	} else if len(legacy) != 0 || hasQuarto {
-		cli.Attention(*Context, "Missing iasi.toml in: %s", path)
+		Context.Diagnostics = append(Context.Diagnostics, structures.Diagnostic{
+			Path: filepath.Clean(path),
+			Message: "Missing iasi.toml in: " + path,
+		})
 	}
 
 	for _, entry := range entries {

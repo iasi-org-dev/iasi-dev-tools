@@ -36,6 +36,7 @@ const (
 	colorReset  = "\033[0m"
 	colorBold   = "\033[1m"
 	colorBlue   = "\033[38;2;0;0;255m"
+	colorBoldWhite = "\033[1;37m"
 	colorCyan   = "\033[36m"
 	colorWhite  = "\033[37m"
 	colorGreen  = "\033[32m"
@@ -51,7 +52,7 @@ func Preview(format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	lineBreak := strings.HasSuffix(message, "\n")
 	message = strings.TrimSuffix(message, "\n")
-	fmt.Fprintf(os.Stdout, "%s%s%s", colorBlue, message, colorReset)
+	fmt.Fprintf(os.Stdout, "%s%s%s", colorBoldWhite, message, colorReset)
 	if lineBreak {
 		fmt.Fprintln(os.Stdout)
 	}
@@ -168,9 +169,9 @@ func messageVisible(Context structures.Context, visibility messageVisibility) bo
 func messageColor(level messageLevel) string {
 	switch level {
 	case levelVerbose:
-		return colorBlue
+		return colorBoldWhite
 	case levelHeader:
-		return colorCyan
+		return colorBoldWhite
 	case levelInfo:
 		return colorWhite
 	case levelSuccess:

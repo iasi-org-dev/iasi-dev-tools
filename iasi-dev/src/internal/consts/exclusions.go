@@ -4,4 +4,5 @@ var RequiredExclusions = []string{
 	".git",
 	".github",
 	"tests",
+	"work",
 }

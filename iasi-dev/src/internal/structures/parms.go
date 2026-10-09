@@ -2,7 +2,14 @@ package structures
 
 import "os"
 
+type Diagnostic struct {
+	Path string
+	Message string
+	Emitted bool
+}
+
 type Context struct {
+	Diagnostics []Diagnostic
 	Verbose                int
 	All                    bool
 	Checkpoints            bool

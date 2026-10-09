@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"iasi-dev/internal/args"
 	"iasi-dev/internal/cli"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
@@ -93,6 +94,7 @@ func targetLabel(Context structures.Context, target structures.Target) string {
 }
 
 func targetMessage(Context structures.Context, target structures.Target, depth int, headerVerb string, stepVerb string) {
+	args.EmitTargetDiagnostics(Context, target.Path)
 	label := targetLabel(Context, target)
 	if Context.Subcommand == "" {
 		cli.Header(Context, "%s %s", headerVerb, label)
