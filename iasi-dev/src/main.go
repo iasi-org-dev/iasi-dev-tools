@@ -38,32 +38,29 @@ func run() (exitCode int) {
 	}
 
 	command := os.Args[1]
+
+    if command == "-h" || command == "--help" {
+       printHelp()
+       return RC.NothingToDo
+    }
+
 	Context := args.Parse(command, os.Args[2:])
 	veryVerbose = Context.Verbose == 7
 	commands.SetDebug(Context.Debug)
 	preparePath(&Context)
 
-	if command == "help" {
-		Context.Help = true
-	}
-
-	if Context.Message == "" {
-		Context.Message = command
-	}
+	if command == "help" { Context.Help = true 	}
+	if Context.Message == "" { Context.Message = command }
 
 	logFile, err := createLogFile(command, Context.LogDir)
-	if err != nil {
-		cli.Error(RC.Error, Context, "No se pudo crear el log: %v", err)
-	}
+	if err != nil { cli.Error(RC.Error, Context, "No se pudo crear el log: %v", err) 	}
 	Context.LogFile = logFile
 	defer Context.LogFile.Close()
 
 	prepareParms(command, &Context)
 	logParms(Context)
 
-	if Context.PrepareOnly {
-		return RC.Value(Context.RC)
-	}
+	if Context.PrepareOnly { return RC.Value(Context.RC) }
 
 	if Context.Help {
 		printHelp()
