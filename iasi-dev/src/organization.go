@@ -41,9 +41,7 @@ func prepareParms(command string, Context *structures.Context) {
 
 	args.Prepare(Context)
 	prepareOrganization(Context)
-	if !isVersionWrite(command, Context) {
-		loadOrganizationVersion(Context)
-	}
+	loadOrganizationVersion(Context)
 
 	commands.SetDryRun(Context.DryRun)
 }

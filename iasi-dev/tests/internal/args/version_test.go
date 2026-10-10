@@ -6,12 +6,12 @@ import (
 )
 
 func TestPromoteExtractsExplicitContract(t *testing.T) {
-	Parms := Parse("promote", []string{"v0.6.0", "iasi-org-dev", "iasi-org"})
+	Parms := Parse("promote", []string{"0.6.0", "iasi-org-dev", "iasi-org"})
 	source := filepath.Clean("iasi-org-dev")
 	destination := filepath.Clean("iasi-org")
 
-	if Parms.TargetVersion != "v0.6.0" {
-		t.Fatalf("TargetVersion = %q, want v0.6.0", Parms.TargetVersion)
+	if Parms.TargetVersion != "0.6.0" {
+		t.Fatalf("TargetVersion = %q, want 0.6.0", Parms.TargetVersion)
 	}
 	if Parms.SourcePath != source {
 		t.Fatalf("SourcePath = %q, want %q", Parms.SourcePath, source)
@@ -34,8 +34,8 @@ func TestPromoteExtractsExplicitContract(t *testing.T) {
 }
 
 func TestPromoteAcceptsDotRelativePaths(t *testing.T) {
-	plain := Parse("promote", []string{"v0.6.0", "iasi-org-dev", "iasi-org"})
-	dotted := Parse("promote", []string{"v0.6.0", "./iasi-org-dev", "./iasi-org"})
+	plain := Parse("promote", []string{"0.6.0", "iasi-org-dev", "iasi-org"})
+	dotted := Parse("promote", []string{"0.6.0", "./iasi-org-dev", "./iasi-org"})
 
 	if plain.SourcePath != dotted.SourcePath {
 		t.Fatalf("source paths differ: %q != %q", plain.SourcePath, dotted.SourcePath)
@@ -49,7 +49,7 @@ func TestPromoteAcceptsAbsolutePaths(t *testing.T) {
 	base := t.TempDir()
 	source := filepath.Join(base, "iasi-org-dev")
 	destination := filepath.Join(base, "iasi-org")
-	Parms := Parse("promote", []string{"v0.6.0", source, destination})
+	Parms := Parse("promote", []string{"0.6.0", source, destination})
 
 	if Parms.SourcePath != source {
 		t.Fatalf("SourcePath = %q, want %q", Parms.SourcePath, source)
@@ -60,7 +60,7 @@ func TestPromoteAcceptsAbsolutePaths(t *testing.T) {
 }
 
 func TestPromoteLocalKeepsExplicitContract(t *testing.T) {
-	Parms := Parse("promote", []string{"v0.6.0", "iasi-org-dev", "iasi-org", "-l"})
+	Parms := Parse("promote", []string{"0.6.0", "iasi-org-dev", "iasi-org", "-l"})
 
 	if !Parms.Local {
 		t.Fatal("Local = false, want true")
@@ -71,13 +71,13 @@ func TestPromoteLocalKeepsExplicitContract(t *testing.T) {
 }
 
 func TestWorkflowPromoteExtractsNamedContract(t *testing.T) {
-	Parms := Parse("workflow", []string{"promote", "--source", "iasi-org-dev", "--dest", "iasi-org", "--version", "v0.7.0"})
+	Parms := Parse("workflow", []string{"promote", "--source", "iasi-org-dev", "--dest", "iasi-org", "--version", "0.7.0"})
 
 	if Parms.Subcommand != "promote" {
 		t.Fatalf("Subcommand = %q, want promote", Parms.Subcommand)
 	}
-	if Parms.NextVersion != "v0.7.0" {
-		t.Fatalf("NextVersion = %q, want v0.7.0", Parms.NextVersion)
+	if Parms.NextVersion != "0.7.0" {
+		t.Fatalf("NextVersion = %q, want 0.7.0", Parms.NextVersion)
 	}
 	if Parms.TargetVersion != "" {
 		t.Fatalf("TargetVersion = %q, want empty until the workflow selects the frozen VERSION", Parms.TargetVersion)
@@ -93,13 +93,13 @@ func TestWorkflowPromoteRejectsPositionalContract(t *testing.T) {
 			t.Fatal("workflow promote positional contract did not fail")
 		}
 	}()
-	Parse("workflow", []string{"promote", "v0.7.0", "iasi-org-dev", "iasi-org"})
+	Parse("workflow", []string{"promote", "0.7.0", "iasi-org-dev", "iasi-org"})
 }
 
 func TestWorkflowPromoteRequiresEveryNamedParameter(t *testing.T) {
 	tests := [][]string{
-		{"promote", "--dest", "iasi-org", "--version", "v0.7.0"},
-		{"promote", "--source", "iasi-org-dev", "--version", "v0.7.0"},
+		{"promote", "--dest", "iasi-org", "--version", "0.7.0"},
+		{"promote", "--source", "iasi-org-dev", "--version", "0.7.0"},
 		{"promote", "--source", "iasi-org-dev", "--dest", "iasi-org"},
 	}
 
@@ -121,7 +121,7 @@ func TestPromoteRejectsIncompleteContract(t *testing.T) {
 			t.Fatal("promote without source and destination did not fail")
 		}
 	}()
-	Parse("promote", []string{"v0.6.0"})
+	Parse("promote", []string{"0.6.0"})
 }
 
 func TestPromoteRejectsSameSourceAndDestination(t *testing.T) {
@@ -130,7 +130,7 @@ func TestPromoteRejectsSameSourceAndDestination(t *testing.T) {
 			t.Fatal("promote with same source and destination did not fail")
 		}
 	}()
-	Parse("promote", []string{"v0.6.0", "iasi-org", "./iasi-org"})
+	Parse("promote", []string{"0.6.0", "iasi-org", "./iasi-org"})
 }
 
 func TestPromoteRejectsRemovedPushFlag(t *testing.T) {
@@ -139,14 +139,14 @@ func TestPromoteRejectsRemovedPushFlag(t *testing.T) {
 			t.Fatal("-p did not fail")
 		}
 	}()
-	Parse("promote", []string{"v0.6.0", "iasi-org-dev", "iasi-org", "-p"})
+	Parse("promote", []string{"0.6.0", "iasi-org-dev", "iasi-org", "-p"})
 }
 
 func TestRestoreExtractsTargetVersion(t *testing.T) {
-	Parms := Parse("restore", []string{"v0.3.0"})
+	Parms := Parse("restore", []string{"0.3.0"})
 
-	if Parms.TargetVersion != "v0.3.0" {
-		t.Fatalf("TargetVersion = %q, want v0.3.0", Parms.TargetVersion)
+	if Parms.TargetVersion != "0.3.0" {
+		t.Fatalf("TargetVersion = %q, want 0.3.0", Parms.TargetVersion)
 	}
 	if len(Parms.Targets) != 0 {
 		t.Fatalf("Targets = %v, want none", Parms.Targets)
@@ -173,10 +173,10 @@ func TestVersionWithoutOperandLeavesTargetVersionEmpty(t *testing.T) {
 }
 
 func TestVersionExtractsExplicitNewVersion(t *testing.T) {
-	Parms := Parse("version", []string{"v0.6.0"})
+	Parms := Parse("version", []string{"0.6.0"})
 
-	if Parms.TargetVersion != "v0.6.0" {
-		t.Fatalf("TargetVersion = %q, want v0.6.0", Parms.TargetVersion)
+	if Parms.TargetVersion != "0.6.0" {
+		t.Fatalf("TargetVersion = %q, want 0.6.0", Parms.TargetVersion)
 	}
 	if Parms.Organization != "" {
 		t.Fatalf("Organization = %q, want empty", Parms.Organization)
@@ -191,10 +191,10 @@ func TestFreezeHasNoVersionOperand(t *testing.T) {
 }
 
 func TestPromoteCheckUsesSameOperandsAsPromote(t *testing.T) {
-	Parms := Parse("promote-check", []string{"v1.2.3", "iasi-org-dev", "iasi-org", "-l"})
+	Parms := Parse("promote-check", []string{"1.2.3", "iasi-org-dev", "iasi-org", "-l"})
 
-	if Parms.TargetVersion != "v1.2.3" {
-		t.Fatalf("TargetVersion = %q, want v1.2.3", Parms.TargetVersion)
+	if Parms.TargetVersion != "1.2.3" {
+		t.Fatalf("TargetVersion = %q, want 1.2.3", Parms.TargetVersion)
 	}
 	if filepath.Base(Parms.SourcePath) != "iasi-org-dev" || filepath.Base(Parms.DestinationPath) != "iasi-org" {
 		t.Fatalf("unexpected promote-check paths: %q -> %q", Parms.SourcePath, Parms.DestinationPath)

@@ -11,17 +11,14 @@ import (
 	"iasi-dev/internal/commands"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
+	"iasi-dev/internal/versioning"
 )
 
 var promotePrepareRemote = promoteRemotePrepare
 var promoteSynchronizeRemote = promoteRemoteSynchronize
 var promoteSetDestinationVersion = setOrganizationVersionFor
 
-type semanticVersion struct {
-	major int
-	minor int
-	patch int
-}
+type semanticVersion struct { major,minor,patch uint64; pre string }
 
 func Promote(Parms *structures.Parms) []string {
 	requireTargetVersion(Parms, "promote")
@@ -162,13 +159,9 @@ func preparePromoteTemporary(temporary string) error {
 }
 
 func validatePromotionTags(Parms *structures.Parms, repositories []string, version string) {
-	ref := "refs/tags/" + version
 	for _, repository := range repositories {
-		result := commands.Run(repository, Parms.LogFile, "git", "rev-parse", "--verify", ref)
-		if result.RC != RC.OK {
-			cli.Error(RC.Error, *Parms, "El tag %s no existe en %s.", version, filepath.Base(repository))
-		}
-	}
+  resolveHistoricalTag(Parms, repository, version)
+ }
 }
 
 func promoteRepositories(Parms *structures.Parms, repositories []string, root string, version string) []string {
@@ -177,7 +170,8 @@ func promoteRepositories(Parms *structures.Parms, repositories []string, root st
 		name := filepath.Base(repository)
 		destination := filepath.Join(root, name)
 		cli.Step(*Parms, "Cloning %s...", name)
-		result := commands.RunLogged(root, Parms.LogFile, "git", "clone", "--branch", version, "--single-branch", repository, destination)
+		tag := resolveHistoricalTag(Parms, repository, version)
+  result := commands.RunLogged(root, Parms.LogFile, "git", "clone", "--branch", tag, "--single-branch", repository, destination)
 		if result.RC != RC.OK {
 			cli.Error(RC.Error, *Parms, "No se pudo clonar %s desde el tag %s. Revisa el log: %s", name, version, logName(*Parms))
 		}
@@ -287,49 +281,26 @@ func requireTargetVersion(Parms *structures.Parms, operation string) {
 }
 
 func parseSemanticVersion(value string) (semanticVersion, bool) {
-	if !strings.HasPrefix(value, "v") {
-		return semanticVersion{}, false
-	}
-
-	parts := strings.Split(strings.TrimPrefix(value, "v"), ".")
-	if len(parts) != 3 {
-		return semanticVersion{}, false
-	}
-
-	values := make([]int, 3)
-	for i, part := range parts {
-		if part == "" || (len(part) > 1 && part[0] == '0') {
-			return semanticVersion{}, false
-		}
-
-		number, err := strconv.Atoi(part)
-		if err != nil || number < 0 {
-			return semanticVersion{}, false
-		}
-		values[i] = number
-	}
-
-	return semanticVersion{major: values[0], minor: values[1], patch: values[2]}, true
+ v,ok:=versioning.Parse(value)
+ return semanticVersion{v.Major,v.Minor,v.Patch,v.Pre},ok
 }
 
-func compareSemanticVersions(left semanticVersion, right semanticVersion) int {
-	if left.major != right.major {
-		if left.major < right.major {
-			return -1
-		}
-		return 1
-	}
-	if left.minor != right.minor {
-		if left.minor < right.minor {
-			return -1
-		}
-		return 1
-	}
-	if left.patch != right.patch {
-		if left.patch < right.patch {
-			return -1
-		}
-		return 1
-	}
-	return 0
+func parseLegacySemanticVersion(value string)(semanticVersion,bool){
+ v,ok:=versioning.ParseLegacy(value)
+ return semanticVersion{v.Major,v.Minor,v.Patch,v.Pre},ok
+}
+
+func compareSemanticVersions(a,b semanticVersion)int{
+ return versioning.Compare(versioning.Version{Major:a.major,Minor:a.minor,Patch:a.patch,Pre:a.pre},versioning.Version{Major:b.major,Minor:b.minor,Patch:b.patch,Pre:b.pre})
+}
+
+// resolveHistoricalTag uses the canonical name unless only the historical tag exists.
+func resolveHistoricalTag(Parms *structures.Parms, repository, version string)string{
+ for _,tag:=range versioning.TagCandidates(version){
+  ref:="refs/tags/"+tag
+  result:=commands.Run(repository,Parms.LogFile,"git","rev-parse","--verify",ref)
+  if result.RC==RC.OK{return tag}
+ }
+ cli.Error(RC.Error,*Parms,"El tag %s no existe en %s.",version,filepath.Base(repository))
+ return ""
 }

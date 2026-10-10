@@ -105,7 +105,7 @@ func validateFreezeVersion(Parms *structures.Parms, repositories []string, versi
 
 	for _, repository := range repositories {
 		for _, tag := range freezeRepositoryTags(Parms, repository) {
-			parsed, ok := parseSemanticVersion(tag)
+			parsed, ok := parseLegacySemanticVersion(tag)
 			if !ok {
 				continue
 			}

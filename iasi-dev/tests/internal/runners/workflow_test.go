@@ -172,10 +172,10 @@ func TestWorkflowOrganizationRoot(t *testing.T) {
 }
 
 func TestWorkflowPromoteRequiresNextVersionGreaterThanCurrent(t *testing.T) {
-	for _, nextVersion := range []string{"v0.5.0", "v0.4.9"} {
+	for _, nextVersion := range []string{"0.5.0", "0.4.9"} {
 		rc := RC.OK
 		parms := structures.Parms{
-			Version:     "v0.5.0",
+			Version:     "0.5.0",
 			NextVersion: nextVersion,
 			RC:          &rc,
 		}
@@ -183,7 +183,7 @@ func TestWorkflowPromoteRequiresNextVersionGreaterThanCurrent(t *testing.T) {
 		func() {
 			defer func() {
 				if recover() == nil {
-					t.Fatalf("workflow promote accepted next version %s after v0.5.0", nextVersion)
+					t.Fatalf("workflow promote accepted next version %s after 0.5.0", nextVersion)
 				}
 			}()
 			workflowPromote(&parms)

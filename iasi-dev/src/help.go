@@ -8,13 +8,13 @@ func printHelp() {
 	Usage:
 	  iasi-dev <command> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
 	  iasi-dev workflow <build|publish|release> [-h] [-s] [-v|-V] [-m|-M] [-a] [-c] [-d] [-f] [-l] [-t] [-i] [--path value] [--log directory] [--exclude value[,value]*] [--format value] [--platform value] [--message value] [target...]
-	  iasi-dev workflow promote --source <source-path> --dest <destination-path> --version vMAJOR.MINOR.PATCH [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
+	  iasi-dev workflow promote --source <source-path> --dest <destination-path> --version MAJOR.MINOR.PATCH [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 	  iasi-dev freeze [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	  iasi-dev promote vMAJOR.MINOR.PATCH <source-path> <destination-path> [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	  iasi-dev promote-check vMAJOR.MINOR.PATCH <source-path> <destination-path> [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	  iasi-dev restore [vMAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
+	  iasi-dev promote MAJOR.MINOR.PATCH <source-path> <destination-path> [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
+	  iasi-dev promote-check MAJOR.MINOR.PATCH <source-path> <destination-path> [-l] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
+	  iasi-dev restore [MAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory] [target...]
 	  iasi-dev materialize [-l] <destination> [source] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
-	  iasi-dev version [vMAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
+	  iasi-dev version [MAJOR.MINOR.PATCH] [-h] [-s] [-v|-V] [-m|-M] [-d] [--path value] [--log directory]
 
 	Commands:
 	  help         Show help
@@ -61,6 +61,6 @@ func printHelp() {
 	  --log directory           Directory where execution logs are written.
 	  --source source-path       Source workspace for workflow promote.
 	  --dest destination-path    Destination workspace for workflow promote.
-	  --version vX.Y.Z           Next development VERSION for workflow promote; the current VERSION is the one promoted.
+	  --version X.Y.Z           Next development VERSION for workflow promote; the current VERSION is the one promoted.
 	`)
 }

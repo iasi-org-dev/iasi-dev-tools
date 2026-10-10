@@ -18,7 +18,7 @@ func TestRestoreSwitchArguments(t *testing.T) {
 	if got := restoreSwitchArguments("main"); !reflect.DeepEqual(got, []string{"switch", "main"}) {
 		t.Fatalf("main args = %v", got)
 	}
-	if got := restoreSwitchArguments("v1.0.0"); !reflect.DeepEqual(got, []string{"switch", "--detach", "v1.0.0"}) {
+	if got := restoreSwitchArguments("1.0.0"); !reflect.DeepEqual(got, []string{"switch", "--detach", "1.0.0"}) {
 		t.Fatalf("tag args = %v", got)
 	}
 }

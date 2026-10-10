@@ -6,6 +6,7 @@ import (
 	"iasi-dev/internal/consts"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
+ "strings"
 )
 
 func Version(Parms *structures.Parms) {
@@ -18,7 +19,18 @@ func Version(Parms *structures.Parms) {
 		cli.Error(RC.Error, *Parms, "La versión no es válida: %s", Parms.TargetVersion)
 	}
 
-	setOrganizationVersionFor(Parms, Parms.Organization, Parms.TargetVersion)
+	// The previous VERSION may carry the old v prefix during migration.
+ if Parms.Version != "" {
+  old,ok:=parseLegacySemanticVersion(Parms.Version)
+  if !ok {cli.Error(RC.Error,*Parms,"La versión actual no es válida: %s",Parms.Version)}
+  next,_:=parseSemanticVersion(Parms.TargetVersion)
+  // One-time migration: vX.Y.Z -> X.Y.Z is not a downgrade.
+  migration := strings.HasPrefix(Parms.Version,"v") && compareSemanticVersions(next,old)==0
+  if compareSemanticVersions(next,old)<=0 && !migration {
+   cli.Error(RC.Error,*Parms,"La nueva versión %s debe ser superior a la actual %s.",Parms.TargetVersion,Parms.Version)
+  }
+ }
+ setOrganizationVersionFor(Parms, Parms.Organization, Parms.TargetVersion)
 	Parms.Version = Parms.TargetVersion
 	cli.Success(*Parms, "Organization version set to %s.", Parms.TargetVersion)
 }

@@ -9,6 +9,7 @@ import (
 	"iasi-dev/internal/commands"
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
+ "iasi-dev/internal/versioning"
 )
 
 type restoreState struct {
@@ -30,9 +31,10 @@ func Restore(Parms *structures.Parms) []string {
 		}
 	}
 
-	for _, repository := range Parms.Repos {
-		validateRestoreTarget(Parms, repository, target)
-	}
+	resolved:=map[string]string{}
+ for _,repository:=range Parms.Repos {
+  resolved[repository]=resolveRestoreTag(Parms,repository,target)
+ }
 
 	states := make([]restoreState, 0, len(Parms.Repos))
 	for _, repository := range Parms.Repos {
@@ -43,7 +45,7 @@ func Restore(Parms *structures.Parms) []string {
 	fmt.Printf("Current version: %s\n", Parms.Version)
 	fmt.Printf("Restore target: %s\n", target)
 
-	restoreRepositories(Parms, target, states)
+	restoreRepositories(Parms, target, states, resolved)
 
 	return append([]string{}, Parms.Repos...)
 }
@@ -84,11 +86,11 @@ func repositoryRestoreState(Parms *structures.Parms, repository string) restoreS
 	return restoreState{repository: repository, commit: strings.TrimSpace(result.Stdout)}
 }
 
-func restoreRepositories(Parms *structures.Parms, target string, states []restoreState) {
+func restoreRepositories(Parms *structures.Parms, target string, states []restoreState, resolved map[string]string) {
 	restored := []restoreState{}
 
 	for _, state := range states {
-		args := restoreSwitchArguments(target)
+		args := restoreSwitchArguments(resolved[state.repository])
 		if !restoreCommand(Parms, state.repository, args...) {
 			cli.ErrorMessage(*Parms, "No se pudo restaurar %s a %s", state.repository, target)
 			rollbackRestore(Parms, restored)
@@ -135,4 +137,15 @@ func restoreCommand(Parms *structures.Parms, repository string, args ...string) 
 	cli.VeryVerbose(*Parms, "%s: git %s", filepath.Base(repository), formatCommandArguments(args))
 	result := commands.RunLogged(repository, Parms.LogFile, "git", args...)
 	return result.RC == RC.OK
+}
+
+func resolveRestoreTag(Parms *structures.Parms, repository, target string)string{
+ if target=="main" {validateRestoreTarget(Parms,repository,target);return target}
+ for _,candidate:=range versioning.TagCandidates(target){
+  ref:="refs/tags/"+candidate
+  result:=commands.Run(repository,Parms.LogFile,"git","show-ref","--verify","--quiet",ref)
+  if result.RC==RC.OK{return candidate}
+ }
+ cli.Error(RC.Error,*Parms,"No existe %s en %s",target,repository)
+ return ""
 }

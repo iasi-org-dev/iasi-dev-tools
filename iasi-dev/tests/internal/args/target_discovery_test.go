@@ -224,8 +224,15 @@ func TestPrepareLegacyConfigurationAddsAttention(t *testing.T) {
 	}
 	Prepare(&context)
 
+	if len(context.Diagnostics) != 1 {
+		t.Fatalf("Diagnostics = %v, want one pending diagnostic", context.Diagnostics)
+	}
+	if rc != RC.OK {
+		t.Fatalf("RC = 0x%X before emitting diagnostics, want OK", rc)
+	}
+	EmitRemainingDiagnostics(context)
 	if rc&RC.Attention == 0 {
-		t.Fatalf("RC = 0x%X, want ATTENTION", rc)
+		t.Fatalf("RC = 0x%X after emitting diagnostics, want ATTENTION", rc)
 	}
 }
 
@@ -243,8 +250,15 @@ func TestPrepareQuartoWithoutTOMLAddsAttention(t *testing.T) {
 	}
 	Prepare(&context)
 
+	if len(context.Diagnostics) != 1 {
+		t.Fatalf("Diagnostics = %v, want one pending diagnostic", context.Diagnostics)
+	}
+	if rc != RC.OK {
+		t.Fatalf("RC = 0x%X before emitting diagnostics, want OK", rc)
+	}
+	EmitRemainingDiagnostics(context)
 	if rc&RC.Attention == 0 {
-		t.Fatalf("RC = 0x%X, want ATTENTION", rc)
+		t.Fatalf("RC = 0x%X after emitting diagnostics, want ATTENTION", rc)
 	}
 	if len(context.TargetDetails) != 0 {
 		t.Fatalf("TargetDetails = %v, want no IASI target without iasi.toml", context.TargetDetails)

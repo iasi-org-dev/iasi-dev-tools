@@ -12,6 +12,7 @@ import (
 	"iasi-dev/internal/consts/RC"
 	"iasi-dev/internal/structures"
 	"iasi-dev/internal/tools"
+ "iasi-dev/internal/versioning"
 )
 
 // Parse parses command-line arguments. Preparation is performed later by main.
@@ -103,7 +104,7 @@ func extractWorkflowPromoteParameters(command string, Context *structures.Contex
 		cli.Error(RC.Error, *Context, "workflow promote requiere --dest <destination-path>.")
 	}
 	if strings.TrimSpace(Context.NextVersion) == "" {
-		cli.Error(RC.Error, *Context, "workflow promote requiere --version vMAJOR.MINOR.PATCH.")
+		cli.Error(RC.Error, *Context, "workflow promote requiere --version MAJOR.MINOR.PATCH.")
 	}
 	if !looksLikeSemanticVersion(Context.NextVersion) {
 		cli.Error(RC.Error, *Context, "La nueva versión no es válida: %s", Context.NextVersion)
@@ -125,7 +126,10 @@ func extractTargetVersion(command string, Context *structures.Context) {
 		return
 	}
 
-	Context.TargetVersion = Context.Targets[0]
+	if !looksLikeSemanticVersion(Context.Targets[0]) {
+  cli.Error(RC.Error, *Context, "La versión no es válida: %s", Context.Targets[0])
+ }
+ Context.TargetVersion = Context.Targets[0]
 	Context.Targets = Context.Targets[1:]
 }
 
@@ -134,7 +138,7 @@ func extractVersionOperands(command string, Context *structures.Context) {
 		return
 	}
 	if len(Context.Targets) > 1 {
-		cli.Error(RC.Error, *Context, "version acepta como máximo una versión vMAJOR.MINOR.PATCH.")
+		cli.Error(RC.Error, *Context, "version acepta como máximo una versión MAJOR.MINOR.PATCH.")
 	}
 
 	version := Context.Targets[0]
@@ -147,24 +151,8 @@ func extractVersionOperands(command string, Context *structures.Context) {
 }
 
 func looksLikeSemanticVersion(value string) bool {
-	if !strings.HasPrefix(value, "v") {
-		return false
-	}
-	parts := strings.Split(strings.TrimPrefix(value, "v"), ".")
-	if len(parts) != 3 {
-		return false
-	}
-	for _, part := range parts {
-		if part == "" || (len(part) > 1 && part[0] == '0') {
-			return false
-		}
-		for _, char := range part {
-			if char < '0' || char > '9' {
-				return false
-			}
-		}
-	}
-	return true
+	_, ok := versioning.Parse(value)
+ return ok
 }
 
 func validateOrganizationWideCommand(command string, Context *structures.Context) {
