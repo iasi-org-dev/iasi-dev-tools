@@ -1,0 +1,103 @@
+# Modelo mental
+
+La forma general de una llamada es:
+
+```text
+iasi-dev <comando> [opciones] [proyectos...]
+```
+
+```{r}
+#| label: tbl-modelo
+#| tbl-cap: "Modelo básico de `iasi-dev`"
+
+model = data.frame(
+  Elemento = c("Comando", "Opciones", "Proyectos o carpetas"),
+  Pregunta = c(
+    "¿Qué quiero hacer?",
+    "¿Cómo quiero que se ejecute?",
+    "¿Dónde quiero aplicarlo?"
+  )
+)
+
+knitr::kable(model, col.names = c("Elemento", "Pregunta que responde"), align = c("l", "l"))
+```
+
+## El comando dice qué quieres hacer
+
+Por ejemplo:
+
+```text
+iasi-dev build
+```
+
+```text
+iasi-dev publish
+```
+
+```text
+iasi-dev commit
+```
+
+Cada comando representa una operación distinta.
+
+## Las opciones modifican la ejecución
+
+Por ejemplo:
+
+```text
+iasi-dev commit -l
+```
+
+crea el commit localmente sin hacer `push`.
+
+O:
+
+```text
+iasi-dev build --format pdf
+```
+
+indica el formato que debe utilizar el build cuando sea aplicable.
+
+## Los proyectos indican dónde actuar
+
+Puedes indicar un repositorio concreto:
+
+```text
+iasi-dev build iasi-book-I
+```
+
+varios:
+
+```text
+iasi-dev build iasi-book-I iasi-book-II
+```
+
+o una carpeta que los contenga.
+
+Si no indicas ningún proyecto, `iasi-dev` trabaja a partir de la carpeta en la que estás.
+
+## Puedes ejecutar desde otra carpeta con `--path`
+
+No es necesario cambiar primero de directorio:
+
+```text
+iasi-dev build --path C:\iasi-org-dev
+```
+
+`--path` indica a `iasi-dev` desde qué carpeta debe trabajar.
+
+## Dos niveles de trabajo
+
+Conviene distinguir dos casos:
+
+```text
+repositorio
+    build / publish / release / commit
+
+organización completa
+    version / freeze / promote / restore / materialize / workflow promote
+```
+
+Las operaciones de organización trabajan con el conjunto completo, no con una selección parcial de targets.
+
+En particular, `freeze` fija la versión actual de desarrollo mediante tags y `promote` reconstruye la organización estable desde esos tags.

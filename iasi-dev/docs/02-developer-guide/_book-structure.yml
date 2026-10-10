@@ -1,0 +1,12 @@
+book:
+  chapters:
+    - index.qmd
+    - chapters/01-proposito-y-principios.qmd
+    - chapters/02-arquitectura.qmd
+    - chapters/03-modelo-de-ejecucion.qmd
+    - chapters/04-comandos-y-responsabilidades.qmd
+    - chapters/05-workflows.qmd
+    - chapters/06-evolucion-y-extension.qmd
+    - chapters/07-errores-observabilidad.qmd
+    - chapters/08-testing.qmd
+    - chapters/09-fronteras-actuales.qmd

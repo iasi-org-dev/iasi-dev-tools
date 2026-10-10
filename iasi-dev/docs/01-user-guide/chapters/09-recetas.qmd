@@ -1,0 +1,119 @@
+# Recetas
+
+```{r}
+#| label: tbl-recetas
+#| tbl-cap: "Operaciones habituales"
+
+recipes = data.frame(
+  Objetivo = c(
+    "Construir el proyecto actual",
+    "Construir varios proyectos",
+    "Construir desde otra carpeta",
+    "Publicar un proyecto",
+    "Crear un commit y hacer push",
+    "Crear un commit solo local",
+    "Ejecutar build y commit",
+    "Ejecutar build, publish y commit",
+    "Consultar la versión de la organización",
+    "Establecer la siguiente versión de desarrollo",
+    "Congelar la versión actual",
+    "Promover una versión congelada",
+    "Promover una versión solo en local",
+    "Ejecutar el workflow completo de promoción",
+    "Restaurar una versión",
+    "Volver a main",
+    "Materializar una organización localmente",
+    "Sincronizar un recurso común"
+  ),
+  Comando = c(
+    "iasi-dev build",
+    "iasi-dev build iasi-book-I iasi-book-II",
+    "iasi-dev build --path C:\\iasi-org-dev",
+    "iasi-dev publish iasi-book-I",
+    "iasi-dev commit --message 'Actualización' iasi-dev",
+    "iasi-dev commit -l --message 'Trabajo local' iasi-dev",
+    "iasi-dev workflow build iasi-book-I",
+    "iasi-dev workflow publish -a iasi-book-I",
+    "iasi-dev version iasi-org-dev",
+    "iasi-dev version v0.5.2 iasi-org-dev",
+    "iasi-dev freeze",
+    "iasi-dev promote v0.5.1 C:\\iasi-org-dev C:\\iasi-org",
+    "iasi-dev promote v0.5.1 C:\\iasi-org-dev C:\\iasi-org -l",
+    "iasi-dev workflow promote --source C:\\iasi-org-dev --dest C:\\iasi-org --version v0.5.2",
+    "iasi-dev restore v0.5.1",
+    "iasi-dev restore",
+    "iasi-dev materialize -l C:\\iasi-org C:\\iasi-org-dev",
+    "iasi-dev sync .gitattributes"
+  )
+)
+
+knitr::kable(recipes, col.names = c("Objetivo", "Comando"), align = c("l", "l"))
+```
+
+## Ciclo manual de una promoción
+
+Supongamos que la organización de desarrollo está en `v0.5.1`.
+
+Primero se congela esa versión:
+
+```text
+iasi-dev freeze
+```
+
+Después se establece explícitamente la siguiente versión de desarrollo:
+
+```text
+iasi-dev version v0.5.2
+```
+
+Y se promueve la versión que acabamos de congelar:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+El resultado conceptual es:
+
+```text
+iasi-org-dev VERSION = v0.5.2
+iasi-org     VERSION = v0.5.1
+```
+
+## El mismo ciclo mediante `workflow promote`
+
+El workflow reúne las tres operaciones anteriores:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+Si `source` estaba en `v0.5.1`, ejecuta:
+
+```text
+freeze v0.5.1
+      ↓
+version v0.5.2 en source
+      ↓
+promote v0.5.1 a dest
+```
+
+## Workflow completo de release
+
+```text
+iasi-dev workflow release -a
+```
+
+Ejecuta:
+
+```text
+build → publish → release → commit
+```
+
+Si quieres commits también en etapas intermedias:
+
+```text
+iasi-dev workflow release -a -c
+```

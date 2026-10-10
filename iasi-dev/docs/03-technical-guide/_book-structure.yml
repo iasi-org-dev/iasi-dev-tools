@@ -1,0 +1,15 @@
+book:
+  chapters:
+    - index.qmd
+    - chapters/01-entrypoint.qmd
+    - chapters/02-argumentos.qmd
+    - chapters/03-discovery-organizacion.qmd
+    - chapters/04-estructuras.qmd
+    - chapters/05-comandos-externos.qmd
+    - chapters/06-salida-logs-rc.qmd
+    - chapters/07-runners.qmd
+    - chapters/08-workflows.qmd
+    - chapters/09-promote-restore.qmd
+    - chapters/10-materialize-push.qmd
+    - chapters/11-sync.qmd
+    - chapters/12-testing-estado.qmd

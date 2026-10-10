@@ -1,0 +1,58 @@
+# Implementación de workflows
+
+## Dispatcher de workflow
+
+`Workflow()` distingue dos categorías:
+
+1. `build`, `publish` y `release`, ejecutados repo a repo;
+2. `promote`, ejecutado una sola vez sobre la organización completa.
+
+## Build
+
+`workflowBuild()` ejecuta `Build()`. Si el resultado no es `NothingToDo`, hace commit cuando el workflow es standalone o cuando `-c` activa checkpoints.
+
+## Publish
+
+Con `-a`, `workflowPublish()` ejecuta primero `workflowBuild(false, ...)`. Después publica y hace commit si corresponde.
+
+## Release
+
+Con `-a`, `workflowRelease()` llama primero a `workflowPublish(false, ...)`, que a su vez puede incluir build.
+
+## Promote
+
+Modo normal:
+
+```text
+Promote
+  ↓
+workflowPromoteDestination
+  ↓
+materializeLocal
+  ↓
+[si no -l] push
+```
+
+Modo `-p`:
+
+```text
+workflowPromotePush
+  ↓
+comprueba destino estable local
+  ↓
+realiza discovery sobre ese destino
+  ↓
+push
+```
+
+No se vuelve a ejecutar `Promote` ni `materializeLocal`.
+
+## Deducción del destino estable
+
+`workflowPromoteDestination()` elimina el sufijo `-dev` de la organización y sitúa el workspace estable como hermano del workspace de desarrollo.
+
+Ejemplo:
+
+```text
+C:\iasi-org-dev  →  C:\iasi-org
+```

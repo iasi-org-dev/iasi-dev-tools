@@ -1,0 +1,51 @@
+# Salida, logs y códigos de retorno
+
+## Niveles de salida
+
+`internal/cli/output.go` define niveles visuales y visibilidad independientes.
+
+Las funciones públicas incluyen:
+
+- `Header`;
+- `Info`;
+- `Success`;
+- `Warning`;
+- `ErrorMessage`;
+- `Verbose`;
+- `VeryVerbose`;
+- `Step`;
+- `Direct`.
+
+Los mensajes estructurados se escriben también en el log cuando existe.
+
+## Logs
+
+`createLogFile()` crea `logs/iasi-<command>-YYYYMMDDhhmmss.log` bajo el working directory efectivo.
+
+La misma ejecución mantiene un único handle abierto, compartido con runners y comandos externos.
+
+## Bitmask RC
+
+Los bits de resultado son:
+
+```text
+0x00 OK
+0x01 NothingToDo
+0x02 Info
+0x04 Warning
+0x08 Attention
+0x10 Error
+0x20 Severe
+0x40 Fatal
+0x80 Reserved
+```
+
+`RC.Add()` combina únicamente el byte público. `Skip = 0x100` es una marca interna y no se expone como exit code.
+
+## Aborto controlado
+
+`cli.Error()` escribe el mensaje y llama a `Abort()`. `Abort()` acumula el RC y lanza `RC.Stop`. `run()` recupera ese valor y lo convierte en resultado del proceso.
+
+## `externalRC`
+
+Por defecto `NothingToDo` se transforma en `OK` para el proceso. En `-V`, se conserva como `1`.

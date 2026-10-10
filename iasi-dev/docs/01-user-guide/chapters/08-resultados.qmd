@@ -1,0 +1,68 @@
+# Resultados y errores
+
+Para el usuario, los resultados habituales pueden resumirse así:
+
+```{r}
+#| label: tbl-resultados
+#| tbl-cap: "Resultados habituales"
+
+results = data.frame(
+  Resultado = c("OK", "Nada que hacer", "Aviso", "Error"),
+  Significado = c(
+    "La operación se ha completado correctamente.",
+    "La operación era válida, pero no había trabajo pendiente.",
+    "Existe una condición relevante que no impide necesariamente continuar.",
+    "La operación no se ha podido completar correctamente."
+  )
+)
+
+knitr::kable(results, col.names = c("Resultado", "Significado"), align = c("l", "l"))
+```
+
+## “Nada que hacer” no es un error
+
+Un ejemplo típico es:
+
+```text
+iasi-dev commit
+```
+
+sobre un repositorio limpio.
+
+No hay ningún fallo. Simplemente no existe nada que confirmar.
+
+En ejecución normal, `iasi-dev` trata este caso como una salida correcta del proceso.
+
+Con `-V`, el código específico de “nada que hacer” se conserva. Esto puede ser útil en scripts que necesiten distinguirlo de un éxito con trabajo realizado.
+
+## Avisos
+
+Un aviso informa de una situación relevante, pero no implica necesariamente que la operación deba detenerse.
+
+Por ejemplo, una carpeta solicitada puede no contener ningún repositorio aplicable.
+
+## Errores y modo tolerante
+
+Sin `-t`, un error puede detener la ejecución.
+
+Con `-t`, `iasi-dev` puede continuar con los siguientes proyectos cuando sea seguro hacerlo.
+
+```text
+repo A → OK
+repo B → ERROR
+repo C → continúa
+```
+
+El hecho de continuar no convierte el error anterior en éxito. El resultado final sigue reflejando que hubo problemas.
+
+## Operaciones coordinadas
+
+Las operaciones de organización intentan evitar estados parciales.
+
+`freeze`, por ejemplo, crea y publica el mismo tag de versión en todos los repositorios. Si falla a mitad del proceso, intenta retirar los tags que ya hubiera creado o publicado.
+
+`promote` valida primero que la versión congelada exista como tag publicado en todos los repositorios del origen antes de materializar la organización estable.
+
+`restore` comprueba también el destino antes de modificar varios repositorios.
+
+Estas comprobaciones reducen el riesgo de dejar una organización con repositorios en estados incompatibles.

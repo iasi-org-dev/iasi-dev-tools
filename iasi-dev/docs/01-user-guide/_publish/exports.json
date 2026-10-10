@@ -1,0 +1,6 @@
+{
+  "exports": [
+    {"profile": "pdf", "text": "PDF", "icon": "file-earmark-pdf", "href": "pdf/iasi-dev-user-guide.pdf"},
+    {"profile": "epub", "text": "eBook", "icon": "book", "href": "epub/iasi-dev-user-guide.epub"}
+  ]
+}

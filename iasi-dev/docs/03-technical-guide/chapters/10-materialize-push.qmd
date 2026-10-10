@@ -1,0 +1,43 @@
+# Materialize y push
+
+## Objetivo
+
+La materialización recrea una organización en otro workspace **sin transportar el historial Git**.
+
+## Preparación
+
+`Materialize()` llama primero a `materializeLocal()`. Si no hay repositorios o `-l` está activo, termina. En caso contrario llama a `push()`.
+
+## Destino
+
+`MaterializeDestination` ya llega como ruta absoluta. Si el directorio no existe, `confirmMaterializeDestination()` pregunta al usuario si desea crearlo.
+
+Respuestas afirmativas aceptadas: `s`, `si`, `sí`, `y`, `yes` sin distinción de mayúsculas.
+
+## Temporal
+
+El temporal es hermano del destino:
+
+```text
+<parent>/.<destination>.materialize.tmp
+```
+
+Cada repo se copia ahí, se inicializa con Git y recibe un `origin` calculado a partir del nombre de la organización destino.
+
+Cuando todo está preparado, el temporal sustituye al destino.
+
+## `push`
+
+`push()` es package-private. Recorre los repositorios y publica el branch actual con:
+
+```text
+git push -u origin HEAD
+```
+
+No existe un comando público `iasi-dev push`.
+
+El acceso público a esta primitive se realiza mediante `promote -p` o `workflow promote -p`, según el nivel de operación deseado.
+
+## Estado de implementación
+
+En el snapshot actual, las funciones de copia, `git init`, ajuste de remoto, sustitución y push de organización imprimen la acción prevista y devuelven éxito. La transacción está modelada, pero la mutación física final todavía está pendiente de activación.

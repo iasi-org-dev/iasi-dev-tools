@@ -1,0 +1,47 @@
+# Promote y restore
+
+## Versionado semántico
+
+`semanticVersion` almacena `major`, `minor` y `patch`.
+
+`parseSemanticVersion()` exige:
+
+- prefijo `v`;
+- exactamente tres componentes;
+- enteros no negativos;
+- ausencia de ceros iniciales salvo el propio `0`.
+
+## Promote
+
+El runner:
+
+1. exige versión destino, salvo `-p`;
+2. valida `VERSION` actual;
+3. calcula la versión semántica máxima de cada repositorio a partir de tags;
+4. exige que todos los repositorios estén alineados;
+5. exige que la versión destino sea superior;
+6. prepara la transacción de tags.
+
+### Transacción de tags
+
+Primero se crean tags anotados en todos los repositorios. Después se publican uno a uno.
+
+Si falla una creación local, se eliminan los tags locales ya creados en orden inverso.
+
+Si falla un push remoto, se eliminan primero los tags remotos ya publicados y después los locales.
+
+## Restore
+
+`restore` valida que el target exista en todos los repositorios antes de modificar ninguno.
+
+Para cada repo conserva el estado previo:
+
+- branch, si HEAD es simbólico;
+- commit, si estaba detached.
+
+El destino es:
+
+- `main` cuando no hay versión;
+- `git switch --detach <tag>` para una versión.
+
+Si una restauración falla, los repositorios ya procesados se restauran en orden inverso a su branch o commit previo.

@@ -1,0 +1,96 @@
+# Primeros pasos
+
+## Mostrar la ayuda
+
+```text
+iasi-dev help
+```
+
+También se muestra la ayuda si ejecutas `iasi-dev` sin indicar ningún comando.
+
+## Construir el proyecto actual
+
+Sitúate dentro del repositorio y ejecuta:
+
+```text
+iasi-dev build
+```
+
+También puedes escribir explícitamente:
+
+```text
+iasi-dev build .
+```
+
+## Construir otro proyecto
+
+```text
+iasi-dev build iasi-book-I
+```
+
+## Construir varios proyectos
+
+```text
+iasi-dev build iasi-book-I iasi-book-II
+```
+
+## Trabajar desde otra carpeta
+
+```text
+iasi-dev build --path C:\iasi-org-dev
+```
+
+Esto resulta útil cuando quieres lanzar una operación sobre varios repositorios sin cambiar previamente de directorio.
+
+## Aumentar la información mostrada
+
+```{r}
+#| label: tbl-primeros-niveles
+#| tbl-cap: "Niveles habituales de información"
+
+levels = data.frame(
+  Opcion = c("-s", "-v", "-V", "-d"),
+  Uso = c(
+    "Reducir al mínimo la salida de consola.",
+    "Mostrar más información sobre la ejecución.",
+    "Mostrar el nivel de detalle más alto.",
+    "Mostrar información adicional de diagnóstico."
+  )
+)
+
+knitr::kable(levels, col.names = c("Opción", "Uso"), align = c("l", "l"))
+```
+
+## Continuar aunque falle un proyecto
+
+```text
+iasi-dev build -t .
+```
+
+Con `-t`, si una operación falla en un repositorio y el error puede tratarse de forma tolerante, `iasi-dev` continúa con los siguientes.
+
+El error no desaparece: simplemente no impide procesar el resto.
+
+## Consultar la versión de una organización
+
+```text
+iasi-dev version
+```
+
+Si quieres consultar una organización concreta:
+
+```text
+iasi-dev version iasi-org-dev
+```
+
+## Establecer explícitamente la siguiente versión
+
+`iasi-dev` no incrementa versiones automáticamente. La nueva versión se indica de forma explícita:
+
+```text
+iasi-dev version v0.5.2
+```
+
+La versión nueva debe ser superior a la actual.
+
+Las operaciones que acceden a GitHub requieren que la CLI `gh` esté instalada y autenticada.

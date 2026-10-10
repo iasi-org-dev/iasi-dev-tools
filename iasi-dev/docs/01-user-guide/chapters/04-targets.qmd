@@ -1,0 +1,119 @@
+# Proyectos y carpetas
+
+En muchos comandos, los últimos argumentos indican los proyectos o carpetas sobre los que quieres trabajar.
+
+En la ayuda del CLI pueden aparecer como `target` o `targets`. En esta guía los llamaremos simplemente **proyectos** o **carpetas**.
+
+## Un repositorio concreto
+
+```text
+iasi-dev build iasi-book-I
+```
+
+## Varios repositorios
+
+```text
+iasi-dev build iasi-book-I iasi-book-II
+```
+
+## Una carpeta que contiene repositorios
+
+```text
+iasi-dev build C:\iasi-org-dev
+```
+
+`iasi-dev` busca repositorios Git dentro de la carpeta indicada y aplica el comando a los que encuentre.
+
+## Ejecutar desde dentro de un repositorio
+
+Si indicas una carpeta que está dentro de un repositorio, `iasi-dev` utiliza ese repositorio como unidad de trabajo.
+
+Por ejemplo, si estás dentro de:
+
+```text
+C:\iasi-org-dev\iasi-book-I\chapters
+```
+
+y ejecutas:
+
+```text
+iasi-dev build .
+```
+
+la operación se aplica al repositorio `iasi-book-I`.
+
+## Sin indicar ningún proyecto
+
+Si el comando lo permite y no indicas ningún proyecto, se utiliza la carpeta actual:
+
+```text
+iasi-dev build
+```
+
+## Exclusiones
+
+Durante la búsqueda de repositorios se excluyen siempre determinadas carpetas de infraestructura, como `.git`, `.github` y `tests`.
+
+Puedes añadir más exclusiones:
+
+```text
+iasi-dev build --exclude outputs,temp .
+```
+
+También puedes utilizar un fichero con una exclusión por línea:
+
+```text
+iasi-dev build --exclude exclusions.txt .
+```
+
+## Comandos con argumentos especiales
+
+No todos los comandos interpretan sus argumentos finales como targets.
+
+`sync` recibe nombres o rutas de recursos compartidos:
+
+```text
+iasi-dev sync .gitattributes
+```
+
+`materialize` recibe primero el destino y, opcionalmente, el origen:
+
+```text
+iasi-dev materialize C:\iasi-org C:\iasi-org-dev
+```
+
+`version` puede consultar o establecer la versión de una organización:
+
+```text
+iasi-dev version iasi-org
+```
+
+```text
+iasi-dev version v0.5.2 iasi-org-dev
+```
+
+`freeze` es una operación de organización completa. No recibe una lista de targets:
+
+```text
+iasi-dev freeze
+```
+
+`promote` recibe la versión congelada y dos rutas explícitas, origen y destino:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+`restore` puede recibir una versión:
+
+```text
+iasi-dev restore v0.5.1
+```
+
+El workflow de promoción utiliza parámetros nombrados y obligatorios:
+
+```text
+iasi-dev workflow promote --source C:\iasi-org-dev --dest C:\iasi-org --version v0.5.2
+```
+
+En este workflow, `--version` significa **la siguiente versión de desarrollo**. La versión promovida es la `VERSION` actual del origen antes de iniciar el workflow.

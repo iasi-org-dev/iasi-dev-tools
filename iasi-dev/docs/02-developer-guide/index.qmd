@@ -1,0 +1,16 @@
+---
+title: "IASI Dev"
+subtitle: "Guía de desarrollo"
+---
+
+# Introducción
+
+Esta guía está dirigida a quien vaya a **trabajar en la evolución de `iasi-dev`**.
+
+No pretende describir cada función ni cada estructura interna. Para eso existe la Technical Guide. Aquí interesa comprender el producto como desarrollador: qué problema resuelve, qué principios sostienen su diseño, cómo se reparten las responsabilidades y qué reglas conviene preservar cuando se añade funcionalidad.
+
+La pregunta central de esta guía es:
+
+> **¿Cómo puedo modificar y hacer evolucionar `iasi-dev` sin romper su modelo?**
+
+`iasi-dev` ha dejado de ser una colección de scripts auxiliares. Es el CLI que coordina operaciones de desarrollo de IASI sobre proyectos, repositorios y organizaciones completas, incluido el ciclo explícito de versionado, congelación y promoción.

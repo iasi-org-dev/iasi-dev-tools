@@ -1,0 +1,381 @@
+# Comandos
+
+```{r}
+#| label: tbl-comandos
+#| tbl-cap: "Comandos públicos de `iasi-dev`"
+
+commands = data.frame(
+  Comando = c("help", "build", "publish", "release", "commit", "version", "freeze", "promote", "restore", "materialize", "workflow", "sync"),
+  Finalidad = c(
+    "Mostrar la ayuda.",
+    "Construir proyectos IASI.",
+    "Publicar proyectos IASI.",
+    "Ejecutar la release definida por el proyecto.",
+    "Crear commits y, salvo modo local, enviarlos al remoto.",
+    "Mostrar o establecer explícitamente la versión de una organización.",
+    "Congelar la versión actual de la organización mediante tags publicados.",
+    "Promover una versión previamente congelada a una organización estable.",
+    "Restaurar los repositorios a una versión o a main.",
+    "Crear una copia limpia de una organización sin conservar su historia Git.",
+    "Ejecutar una secuencia de operaciones.",
+    "Sincronizar recursos compartidos desde iasi-common."
+  )
+)
+
+knitr::kable(commands, col.names = c("Comando", "Finalidad"), align = c("l", "l"))
+```
+
+## `build`
+
+```text
+iasi-dev build [proyectos...]
+```
+
+Construye los proyectos seleccionados. La lógica específica de construcción se delega en el builder configurado para cada target.
+
+Puedes indicar uno o varios formatos:
+
+```text
+iasi-dev build --format html,pdf iasi-book-I
+```
+
+Cuando el build lo soporta, también puedes limitar la plataforma:
+
+```text
+iasi-dev build --platform windows iasi-dev-tools
+```
+
+## `publish`
+
+```text
+iasi-dev publish [proyectos...]
+```
+
+Publica los proyectos seleccionados mediante `iasi.quarto` cuando esa operación aplica al target.
+
+Cuando el proyecto lo soporta, `-f` fuerza la publicación:
+
+```text
+iasi-dev publish -f iasi-book-I
+```
+
+## `release`
+
+```text
+iasi-dev release [proyectos...]
+```
+
+Ejecuta la operación de release definida por el proyecto para cada target seleccionado.
+
+## `commit`
+
+```text
+iasi-dev commit [proyectos...]
+```
+
+Para cada repositorio con cambios:
+
+```text
+git status
+   ↓
+git add -A .
+   ↓
+git commit
+   ↓
+git push
+```
+
+Puedes indicar el mensaje del commit:
+
+```text
+iasi-dev commit --message "Actualización de documentación" iasi-dev
+```
+
+Con `-l`, el commit se crea localmente pero no se hace `push`:
+
+```text
+iasi-dev commit -l iasi-dev
+```
+
+Si no existen cambios pendientes, el resultado es simplemente “nada que hacer”.
+
+## `version`
+
+```text
+iasi-dev version [vMAJOR.MINOR.PATCH] [organización]
+```
+
+Sin una nueva versión, muestra la `VERSION` registrada para la organización:
+
+```text
+iasi-dev version
+```
+
+```text
+iasi-dev version iasi-org-dev
+```
+
+Para establecer una nueva versión:
+
+```text
+iasi-dev version v0.5.2
+```
+
+También puedes indicar explícitamente la organización:
+
+```text
+iasi-dev version v0.5.2 iasi-org-dev
+```
+
+La selección de versión es siempre explícita. `iasi-dev` no incrementa automáticamente major, minor ni patch.
+
+La nueva versión debe ser superior a la versión actual.
+
+## `freeze`
+
+```text
+iasi-dev freeze
+```
+
+Congela la **versión actual** de la organización de desarrollo.
+
+`freeze` no crea una copia del workspace. La fotografía se representa mediante un tag Git de la `VERSION` actual en cada repositorio de la organización:
+
+```text
+HEAD de cada repositorio
+        ↓
+tag VERSION
+        ↓
+push origin VERSION
+```
+
+Antes de crear los tags, `iasi-dev` comprueba que:
+
+- la `VERSION` actual tiene formato `vMAJOR.MINOR.PATCH`;
+- la versión es superior a los tags de versión ya existentes;
+- los repositorios de la organización no tienen cambios sin commit.
+
+Los tags del freeze siempre se publican en `origin`. Por eso `freeze` no admite `-l`.
+
+Si la operación falla después de haber creado o publicado parte de los tags, `iasi-dev` intenta revertirlos para evitar un freeze incompleto.
+
+## `promote`
+
+```text
+iasi-dev promote <versión> <origen> <destino> [-l]
+```
+
+Promueve una versión **previamente congelada**.
+
+Ejemplo:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+Los tres datos son explícitos:
+
+- `v0.5.1` identifica la versión congelada que se quiere promover;
+- `C:\iasi-org-dev` es el workspace de origen;
+- `C:\iasi-org` es el workspace estable de destino.
+
+Las rutas pueden ser absolutas o relativas al directorio de trabajo.
+
+`promote` no toma el contenido del `main` actual. Lee la versión desde los tags publicados de `origin`, crea un workspace temporal y materializa a partir de esa fotografía:
+
+```text
+origin / tag v0.5.1
+        ↓
+workspace temporal
+        ↓
+materialize
+        ↓
+organización estable
+```
+
+La organización destino queda además con:
+
+```text
+VERSION = v0.5.1
+```
+
+Si esa variable todavía no existe en la organización destino, `promote` la crea; si ya existe, la actualiza.
+
+Por defecto la organización estable se publica. Con `-l`, queda materializada únicamente en local:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org -l
+```
+
+## `restore`
+
+```text
+iasi-dev restore [vMAJOR.MINOR.PATCH] [proyectos...]
+```
+
+Restaura todos los repositorios seleccionados a una versión común.
+
+```text
+iasi-dev restore v0.5.1
+```
+
+La versión debe existir como tag en todos los repositorios. Antes de cambiar nada, `iasi-dev` comprueba que el destino existe en todos ellos.
+
+Si omites la versión:
+
+```text
+iasi-dev restore
+```
+
+los repositorios vuelven a `main`.
+
+Si una restauración falla a mitad de la operación, `iasi-dev` intenta devolver los repositorios ya modificados al estado en el que estaban antes.
+
+## `materialize`
+
+```text
+iasi-dev materialize [-l] <destino> [origen]
+```
+
+Crea una copia de una organización en otra carpeta sin conservar la historia Git anterior.
+
+La operación:
+
+```text
+copia los repositorios a un temporal
+        ↓
+git init en cada copia
+        ↓
+ajusta origin para la organización destino
+        ↓
+sustituye el destino
+        ↓
+push, salvo que se use -l
+```
+
+Ejemplo:
+
+```text
+iasi-dev materialize C:\iasi-org C:\iasi-org-dev
+```
+
+Si omites el origen, se utiliza la carpeta desde la que estás trabajando:
+
+```text
+iasi-dev materialize C:\iasi-org
+```
+
+Si el directorio destino no existe, `iasi-dev` pregunta si quieres crearlo.
+
+Con `-l`, la nueva organización queda preparada únicamente en local:
+
+```text
+iasi-dev materialize -l C:\iasi-org C:\iasi-org-dev
+```
+
+## `workflow`
+
+`workflow` encadena operaciones habituales.
+
+### `workflow build`
+
+```text
+iasi-dev workflow build [proyectos...]
+```
+
+Ejecuta:
+
+```text
+build → commit
+```
+
+### `workflow publish`
+
+```text
+iasi-dev workflow publish [proyectos...]
+```
+
+Ejecuta:
+
+```text
+publish → commit
+```
+
+Con `-a`, ejecuta también las etapas anteriores:
+
+```text
+iasi-dev workflow publish -a
+```
+
+```text
+build → publish → commit
+```
+
+### `workflow release`
+
+```text
+iasi-dev workflow release [proyectos...]
+```
+
+Ejecuta:
+
+```text
+release → commit
+```
+
+Con `-a`:
+
+```text
+build → publish → release → commit
+```
+
+### `workflow promote`
+
+```text
+iasi-dev workflow promote --source <origen> --dest <destino> --version <siguiente-versión>
+```
+
+Los tres parámetros son obligatorios.
+
+Ejemplo, si `iasi-org-dev` está actualmente en `v0.5.1` y quieres continuar el desarrollo como `v0.5.2`:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+El workflow realiza:
+
+```text
+source VERSION = v0.5.1
+        ↓
+freeze v0.5.1
+        ↓
+version v0.5.2 en source
+        ↓
+promote v0.5.1 source → dest
+        ↓
+dest VERSION = v0.5.1
+```
+
+Por tanto, `--version` **no es la versión que se promueve**. Es la siguiente versión de desarrollo que quedará activa en el origen después del freeze.
+
+La versión promovida es siempre la `VERSION` que tenía el origen al comenzar el workflow.
+
+Con `-l`, la promoción estable se materializa en local sin publicarse. El freeze sigue siendo un freeze real: sus tags se publican, y el origen avanza a la nueva versión indicada.
+
+## `sync`
+
+```text
+iasi-dev sync <recurso...>
+```
+
+Sincroniza recursos compartidos desde `iasi-common` hacia las copias que ya existen en el resto del workspace.
+
+```text
+iasi-dev sync .gitattributes
+```
+
+También puedes indicar una ruta relativa dentro de `iasi-common` cuando un nombre no sea suficiente para identificar el recurso.

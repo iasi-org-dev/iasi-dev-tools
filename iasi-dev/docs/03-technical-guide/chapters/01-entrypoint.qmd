@@ -1,0 +1,46 @@
+# Entrada y ciclo de vida
+
+## `main` y `run`
+
+El ejecutable entra por `main()` y delega en `run()`. `run()` es el coordinador del ciclo completo:
+
+```text
+os.Args
+  ↓
+args.Parse
+  ↓
+preparePath
+  ↓
+createLogFile
+  ↓
+prepareParms
+  ↓
+dispatch al runner
+  ↓
+RC.Value
+  ↓
+externalRC
+```
+
+La función usa `defer` para capturar `RC.Stop`. Esto permite abortar desde capas inferiores mediante `panic(RC.Stop{...})` sin llamar a `os.Exit()` fuera de `main`.
+
+## Orden de preparación
+
+El orden importa:
+
+1. se parsean los argumentos;
+2. `--path` cambia el working directory;
+3. se crea el log en el directorio efectivo;
+4. se descubren repositorios y organización;
+5. se carga `VERSION`, salvo en modo push-only;
+6. se despacha el comando.
+
+`materialize` resuelve su destino absoluto durante parsing, antes de aplicar `--path`. El origen opcional permanece sujeto al flujo normal de selección.
+
+## Dispatcher
+
+El `switch` principal expone actualmente:
+
+`build`, `publish`, `commit`, `release`, `workflow`, `sync`, `version`, `promote`, `restore` y `materialize`.
+
+`push` no se expone como comando. Es una primitive interna reutilizada por promoción y materialización.

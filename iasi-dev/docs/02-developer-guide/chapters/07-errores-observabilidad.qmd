@@ -1,0 +1,30 @@
+# Errores y observabilidad
+
+## Dos audiencias
+
+La salida de consola y el log tienen objetivos distintos:
+
+- la consola debe permitir entender qué está ocurriendo;
+- el log debe conservar suficiente detalle para diagnosticar procesos externos.
+
+Por eso la ejecución de comandos puede quedar registrada aunque su salida completa no se vuelque a la consola.
+
+## Códigos de retorno
+
+IASI utiliza un código de retorno acumulativo en forma de bitmask. Esto permite conservar simultáneamente información como warning y error sin reducir toda la ejecución al último proceso ejecutado.
+
+Las operaciones deben traducir resultados externos a este protocolo de forma consistente.
+
+## `NothingToDo`
+
+“No había nada que hacer” no equivale a fallo. Normalmente se adapta a éxito a nivel de proceso. En modo `-V` se conserva para facilitar diagnóstico y automatización avanzada.
+
+## Tolerancia
+
+Con `-t`, un fallo aplicable a un repositorio puede convertirlo en no elegible para las siguientes etapas mientras el procesamiento continúa con los demás.
+
+Esto no debe utilizarse para silenciar errores estructurales de la organización. Las operaciones que exigen coherencia global deben seguir fallando globalmente cuando esa coherencia no existe.
+
+## Mensajes
+
+Los runners deben usar la capa `cli` en lugar de imprimir estilos propios. Esto mantiene uniforme la presentación y permite evolucionar colores, niveles y visibilidad sin tocar cada operación.

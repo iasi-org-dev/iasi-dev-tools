@@ -1,0 +1,45 @@
+# Runners básicos
+
+## `Build`
+
+Itera sobre `Parms.Repos`, omite blacklist y ejecuta:
+
+```text
+Rscript -e 'rc = iasi.quarto::build(...); quit(status = as.integer(rc), save = "no")'
+```
+
+`--format` se traduce a un vector R `format = c(...)`.
+
+El `LastRC` del build se conserva porque los workflows necesitan distinguir `NothingToDo`.
+
+## `Publish`
+
+Delega en `iasi.quarto::publish()`. `-f` se traduce a `force = TRUE`.
+
+## `Release`
+
+Delega en `iasi.quarto::release()` sin parámetros adicionales en la implementación actual.
+
+## `Commit`
+
+El flujo es:
+
+```text
+git status --porcelain
+  ↓
+git add -A .
+  ↓
+git commit -m <message>
+  ↓
+[si no -l] git push
+```
+
+`NothingToDo` evita crear un commit vacío.
+
+## `Version`
+
+Se limita a imprimir `Parms.Version`; toda la resolución se ha realizado antes en preparación.
+
+## Política de errores común
+
+`handleRC()` acumula el resultado. Si el RC es erróneo, devuelve `Skip`; con `-t` permite continuar con otros repositorios. La blacklist evita reintroducir repositorios descartados en etapas posteriores.

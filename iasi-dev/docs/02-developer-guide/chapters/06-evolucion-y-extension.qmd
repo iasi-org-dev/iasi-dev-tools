@@ -1,0 +1,68 @@
+# Evolución y extensión
+
+## Añadir un nuevo comando
+
+Antes de escribir código hay que decidir si estamos ante:
+
+1. una operación elemental nueva;
+2. una composición de operaciones existentes;
+3. una opción que modifica una operación existente;
+4. una capacidad interna reutilizable que no debe ser pública.
+
+Una primitiva interna puede existir sin convertirse automáticamente en un verbo público. La API del CLI debe seguir siendo pequeña y semántica.
+
+## Checklist de un comando nuevo
+
+Normalmente habrá que revisar:
+
+- sintaxis y validación de argumentos;
+- separación entre parámetros propios y targets;
+- campos compartidos que realmente sean necesarios;
+- runner;
+- dispatcher principal;
+- ayuda pública;
+- tests de parsing;
+- tests del runner;
+- User Guide;
+- Developer Guide y Technical Guide si introduce conceptos nuevos.
+
+## Diseñar opciones
+
+Una opción debe modificar una intención existente sin convertir el comando en un acertijo.
+
+Dos reglas útiles del CLI actual:
+
+- los flags cortos de una letra (`-l`, `-a`, `-c`) son booleanos;
+- los parámetros que necesitan valor se expresan con nombre largo (`--source`, `--dest`, `--version`).
+
+En `workflow promote`, esos tres parámetros no son adornos sintácticos. Expresan tres conceptos diferentes que no conviene volver implícitos.
+
+## Mantener separadas las responsabilidades del ciclo de promoción
+
+Al evolucionar esta zona, preservar estas fronteras:
+
+```text
+version   → estado VERSION
+freeze    → fotografía inmutable
+promote   → materialización estable de una fotografía
+workflow  → orden y coordinación
+```
+
+Un cambio que haga que `promote` vuelva a etiquetar, que `freeze` avance la siguiente versión o que `version` deduzca automáticamente el patch estaría mezclando responsabilidades.
+
+## Compatibilidad conceptual
+
+No todo cambio compatible sintácticamente es compatible conceptualmente. Conviene proteger especialmente:
+
+- el significado de cada verbo;
+- la escala repo/organización;
+- la separación entre versión congelada y siguiente versión de desarrollo;
+- la inmutabilidad de los freezes publicados;
+- la separación local/remoto;
+- la delegación a herramientas especializadas;
+- el comportamiento transaccional de operaciones multi-repositorio;
+- el carácter derivado y descartable de temporales de materialización/promoción.
+
+## Evolución sin sobregeneralizar
+
+`iasi-dev` es una herramienta de IASI. No necesita convertirse prematuramente en un framework universal de CLIs, VCS o pipelines. Las abstracciones deben aparecer cuando varias necesidades reales las justifiquen.

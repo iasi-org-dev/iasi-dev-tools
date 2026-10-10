@@ -1,0 +1,41 @@
+# Discovery y organización
+
+## Resolución de targets
+
+`args.Prepare()` llama a `processTargets()`.
+
+Si no hay targets se usa `.`. Cada raíz se convierte en ruta absoluta y se valida como directorio.
+
+Si la ruta está dentro de un repositorio Git, `tools.FindRepo()` devuelve el repositorio contenedor. En otro caso `discoverRepos()` recorre recursivamente los subdirectorios.
+
+## Exclusiones
+
+El discovery evita nombres incluidos en `Parms.Exclusions`. Las exclusiones obligatorias se inicializan desde `consts.RequiredExclusions`.
+
+La recursión se detiene al encontrar un repositorio: una vez identificado, no se buscan repositorios anidados dentro de él.
+
+## Organización GitHub
+
+`prepareOrganization()` deduce la organización inspeccionando `origin` de cada repositorio seleccionado.
+
+`githubOrganization()` soporta al menos estas formas:
+
+```text
+git@github.com:org/repo.git
+ssh://git@github.com/org/repo.git
+https://github.com/org/repo.git
+```
+
+Todos los repositorios deben producir la misma organización. Una mezcla de organizaciones aborta la ejecución.
+
+## VERSION
+
+`loadOrganizationVersion()` ejecuta:
+
+```text
+gh variable get VERSION --org <organization>
+```
+
+La ausencia, error o valor vacío es fatal.
+
+En modo `Push`, la carga se omite. Esto permite publicar una organización estable local incluso cuando el destino remoto aún no puede utilizarse como fuente de `VERSION`.

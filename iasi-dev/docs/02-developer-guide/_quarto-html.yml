@@ -1,0 +1,24 @@
+book:
+  sidebar:
+    collapse-level: 1
+  navbar:
+    title: "IASI Dev"
+    background: primary
+    pinned: true
+    left:
+      - text: "Inicio"
+        href: index.qmd
+  page-footer:
+    left: "IASI Project"
+
+format:
+  html:
+    pagetitle: "IASI Dev · Guía de desarrollo"
+    title-prefix: ""
+    theme:
+      - cosmo
+      - resources/css/iasi.scss
+      - resources/css/guide.scss
+    toc: true
+    toc-depth: 3
+    number-sections: true

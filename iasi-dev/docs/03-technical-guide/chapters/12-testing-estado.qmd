@@ -1,0 +1,48 @@
+# Testing y estado de implementación
+
+## Cobertura actual
+
+El repositorio contiene tests para, entre otros:
+
+- parsing de versiones y `-p`;
+- materialización;
+- deducción de organización;
+- resolución de paths;
+- salida de consola;
+- RC;
+- promote;
+- restore;
+- push;
+- workflows.
+
+## Comprobación básica
+
+```text
+go test ./...
+go build ./...
+```
+
+## Stubs deliberados
+
+Varias operaciones sensibles utilizan actualmente funciones que imprimen la mutación prevista y devuelven `true`:
+
+- `promoteCommand`;
+- `restoreCommand`;
+- primitivas físicas de `materialize`;
+- `pushRepository`.
+
+Esto permite probar el flujo y los rollbacks sin alterar aún repositorios remotos o workspaces reales.
+
+## TODO técnicos relevantes
+
+La implementación de `Promote()` mantiene explícitamente pendientes:
+
+- completar la materialización como parte de la promoción elemental si se decide que esa responsabilidad le pertenece;
+- sustitución física transaccional del workspace estable;
+- actualización de `VERSION` tras una promoción exitosa.
+
+El diseño reciente sitúa materialización y publicación principalmente en `workflow promote`, por lo que estos TODO deben revisarse al consolidar la frontera definitiva entre el verbo y el workflow.
+
+## Fuente de verdad
+
+Al evolucionar el sistema conviene mantener sincronizados código, ayuda y las tres vistas documentales: User Guide, Developer Guide y Technical Guide. La repetición entre ellas es aceptable cuando cambia la intención del lector.

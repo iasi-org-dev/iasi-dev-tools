@@ -1,0 +1,59 @@
+# Parsing de argumentos
+
+## `structures.Parms`
+
+`args.Parse()` construye una instancia de `Parms` con valores por defecto, interpreta flags y parámetros largos, extrae operandos especiales y conserva los targets pedidos por el usuario cuando es necesario.
+
+## Flags
+
+Los flags de una letra se almacenan directamente en booleanos o niveles de verbosidad:
+
+```text
+-a All
+-c Checkpoints
+-d Debug
+-f Force
+-h Help
+-i Install
+-l Local
+-p Push
+-s Verbose=0
+-t Tolerant
+-v Verbose=3
+-V Verbose=7
+```
+
+## Parámetros largos
+
+Los parámetros implementados son:
+
+- `--exclude`;
+- `--format`;
+- `--message`;
+- `--path`.
+
+`--exclude` acepta una lista separada por comas o un fichero existente, leído línea a línea.
+
+## Operand parsing especial
+
+### Versiones
+
+`promote`, `restore` y `workflow promote` extraen el primer operando como `TargetVersion`.
+
+### `version`
+
+Puede extraer una organización explícita y elimina ese operando de la lista de targets de filesystem.
+
+### `materialize`
+
+Separa `<destination>` de `[source]`. El destino se convierte inmediatamente en ruta absoluta. El origen, si existe, sigue siendo un target normal.
+
+## Validación de `-p`
+
+`validatePushMode()` impone tres invariantes:
+
+- solo se acepta con `promote` y `workflow promote`;
+- es incompatible con `-l`;
+- no acepta versión ni targets.
+
+Por tanto `-p` es semánticamente push-only, no un modificador acumulativo.

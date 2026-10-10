@@ -1,0 +1,16 @@
+project:
+  output-dir: _outputs/pdf
+
+format:
+  pdf:
+    documentclass: scrreprt
+    papersize: a4
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    geometry:
+      - top=22mm
+      - bottom=22mm
+      - left=25mm
+      - right=25mm

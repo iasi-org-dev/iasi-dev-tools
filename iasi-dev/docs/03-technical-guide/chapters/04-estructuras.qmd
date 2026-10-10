@@ -1,0 +1,35 @@
+# Estructuras e invariantes
+
+## `Parms`
+
+`structures.Parms` es el estado compartido de una ejecución. Sus grupos principales son:
+
+### Opciones
+
+`Verbose`, `All`, `Checkpoints`, `Debug`, `Force`, `Help`, `Install`, `Local`, `Push`, `Tolerant`.
+
+### Parámetros
+
+`Message`, `Format`, `Path`, `Organization`, `Version`, `TargetVersion`, `MaterializeDestination`, `Subcommand`.
+
+### Estado de ejecución
+
+`LogFile`, `RC`, `LastRC`.
+
+### Selección
+
+`Targets`, `RequestedTargets`, `Exclusions`, `Repos`, `BlackList`.
+
+## `Targets` frente a `RequestedTargets`
+
+`RequestedTargets` conserva la intención posicional original cuando una operación necesita acceder a ella después de que el discovery normal transforme `Targets`.
+
+`sync` es un consumidor claro: necesita los nombres/rutas pedidos, no la lista de repositorios resuelta.
+
+## `BlackList`
+
+La blacklist contiene repositorios invalidados para etapas posteriores. Se utiliza para evitar que un repositorio que ya no es procesable vuelva a entrar en una etapa como `commit`.
+
+## `Result`
+
+Los comandos externos devuelven `structures.Result`, con `Stdout`, `Stderr` y `RC`. Esto desacopla la ejecución del proceso de la política de interpretación del resultado.

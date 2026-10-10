@@ -1,0 +1,14 @@
+---
+title: "IASI Dev"
+subtitle: "Guía técnica"
+---
+
+# Introducción
+
+Esta guía describe **cómo está implementado `iasi-dev`**.
+
+Está dirigida a quien necesite bajar al nivel de funciones, estructuras, flujo de control, ejecución de procesos, códigos de retorno y transacciones multi-repositorio.
+
+La Developer Guide explica el modelo y las decisiones. Esta guía abre el capó.
+
+El código Go se organiza bajo `src/iasi-dev`, con paquetes internos para argumentos, CLI, ejecución de comandos, constantes, runners, estructuras y utilidades.

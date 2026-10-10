@@ -1,0 +1,30 @@
+# Sync
+
+## Fuente
+
+`Sync()` toma las entradas pedidas desde `RequestedTargets` y localiza `iasi-common` mediante:
+
+1. `IASI_COMMON_DIR`, si existe;
+2. `<workspace>/iasi-common`, en otro caso.
+
+Una ruta relativa en `IASI_COMMON_DIR` se interpreta respecto al workspace.
+
+## Resolución de la entrada
+
+Si el argumento contiene `/` o `\`, se trata como ruta relativa a `iasi-common` y se impide escapar fuera de ese árbol.
+
+Si es solo un nombre, se busca recursivamente. Cero coincidencias es error; más de una coincidencia también, para evitar una sincronización ambigua.
+
+## Destinos
+
+`findSyncTargets()` busca copias existentes fuera de `iasi-common`. No crea nuevos consumidores.
+
+Se ignoran `.git` y `tests` durante el recorrido.
+
+## Copia
+
+- fichero: copia con truncado, preservando permisos;
+- directorio: merge recursivo;
+- symlink: se recrea el enlace.
+
+Con `-t`, un fallo en una copia produce warning y permite continuar.

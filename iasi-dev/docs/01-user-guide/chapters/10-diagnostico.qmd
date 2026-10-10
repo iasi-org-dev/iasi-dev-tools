@@ -1,0 +1,147 @@
+# Diagnóstico
+
+Cuando una operación no hace lo esperado, conviene avanzar de forma ordenada.
+
+```{r}
+#| label: tbl-diagnostico
+#| tbl-cap: "Secuencia recomendada de diagnóstico"
+
+diagnostic = data.frame(
+  Paso = 1:5,
+  Accion = c(
+    "Comprobar desde qué carpeta estás ejecutando el comando y qué proyecto has indicado.",
+    "Repetir la operación con -v o -V.",
+    "Utilizar -d si necesitas más información de diagnóstico.",
+    "Revisar el log de la ejecución.",
+    "Comprobar si el resultado es un error real o simplemente no había nada que hacer."
+  )
+)
+
+knitr::kable(diagnostic, col.names = c("Paso", "Acción"), align = c("r", "l"))
+```
+
+## No aparece el repositorio que esperabas
+
+Comprueba:
+
+- que la ruta existe;
+- que contiene un repositorio Git o está dentro de uno;
+- que no está excluido por `--exclude`;
+- que no se encuentra dentro de una carpeta excluida automáticamente.
+
+Puedes probar:
+
+```text
+iasi-dev build -v <ruta>
+```
+
+## GitHub no responde o no se puede leer la versión
+
+Las operaciones que consultan GitHub utilizan la CLI `gh`.
+
+Comprueba:
+
+```text
+gh auth status
+```
+
+Si `iasi-dev version` no puede leer o actualizar la versión de la organización, revisa primero la autenticación y el nombre de la organización.
+
+## `version` rechaza la nueva versión
+
+Las versiones deben tener este formato:
+
+```text
+vMAJOR.MINOR.PATCH
+```
+
+Por ejemplo:
+
+```text
+v0.5.2
+```
+
+La nueva versión debe ser superior a la actual. `iasi-dev` no calcula automáticamente cuál debería ser la siguiente.
+
+## `freeze` no puede congelar la organización
+
+`freeze` trabaja sobre la `VERSION` actual de la organización completa.
+
+Comprueba que:
+
+- la `VERSION` actual es válida;
+- es superior a los tags de versión existentes;
+- todos los repositorios están limpios, sin cambios pendientes de commit;
+- el tag todavía no existe en `origin`.
+
+`freeze` siempre publica los tags. No existe un freeze únicamente local.
+
+## `promote` no encuentra la versión
+
+`promote` solo acepta una versión que ya haya sido congelada.
+
+Antes de materializar nada, comprueba que el tag indicado está publicado en `origin` para todos los repositorios del workspace de origen.
+
+Puedes revisar un repositorio con:
+
+```text
+git ls-remote --tags origin
+```
+
+Recuerda además que `promote` recibe explícitamente versión, origen y destino:
+
+```text
+iasi-dev promote v0.5.1 C:\iasi-org-dev C:\iasi-org
+```
+
+## `workflow promote` parece promover la versión equivocada
+
+En este comando:
+
+```text
+iasi-dev workflow promote \
+  --source C:\iasi-org-dev \
+  --dest C:\iasi-org \
+  --version v0.5.2
+```
+
+`--version v0.5.2` significa **siguiente versión de desarrollo**.
+
+Si `source` estaba en `v0.5.1`, la versión promovida será `v0.5.1` y el origen quedará en `v0.5.2`.
+
+```text
+antes:   source v0.5.1
+freeze:  v0.5.1
+source:  v0.5.2
+promote: v0.5.1 → dest
+```
+
+Los parámetros `--source`, `--dest` y `--version` son obligatorios. No se utiliza el antiguo contrato posicional del workflow.
+
+## `restore` no encuentra la versión
+
+Antes de restaurar, `iasi-dev` comprueba que el tag existe en todos los repositorios.
+
+Si uno de ellos no lo tiene, la restauración no comienza.
+
+Puedes revisar los tags del repositorio afectado con Git:
+
+```text
+git tag --list
+```
+
+## `materialize` pregunta por el destino
+
+Si el directorio destino no existe, `iasi-dev` pide confirmación antes de crearlo.
+
+Si existe pero no es un directorio, la operación falla.
+
+## Una operación falla a mitad de varios proyectos
+
+Si quieres observar también el comportamiento de los repositorios siguientes, utiliza `-t` cuando el comando lo permita:
+
+```text
+iasi-dev build -t .
+```
+
+Después revisa el log para identificar el primer error real.

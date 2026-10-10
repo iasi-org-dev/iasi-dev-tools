@@ -1,0 +1,26 @@
+project:
+  type: book
+
+profile:
+  default: html
+  group:
+    - [html, pdf, epub]
+
+metadata-files:
+  - _book-structure.yml
+
+lang: es
+
+resource-path:
+  - resources
+
+book:
+  title: "IASI Dev"
+  subtitle: "Guía de desarrollo"
+  output-file: "iasi-dev-developer-guide"
+
+execute:
+  echo: false
+  warning: false
+  message: false
+  freeze: auto

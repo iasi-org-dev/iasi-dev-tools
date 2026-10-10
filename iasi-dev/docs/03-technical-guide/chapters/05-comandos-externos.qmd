@@ -1,0 +1,31 @@
+# Ejecución de comandos externos
+
+## Capa `commands`
+
+`internal/commands` centraliza `os/exec` y evita que cada runner tenga una política distinta de captura y logging.
+
+Las variantes principales son:
+
+- `Run`: captura stdout/stderr;
+- `RunFriendly`: permite semántica específica por herramienta;
+- `RunDirect`: evita adaptadores específicos;
+- `RunDirectLogged`: vuelca salida directamente al log;
+- `RunProtocolLogged`: interpreta el exit code como RC IASI.
+
+## Adaptador Git
+
+`commandGit()` puede ejecutar Git de forma normal o friendly.
+
+El caso especial actual es `git status`: se ejecuta como `git status --porcelain` y se traduce a:
+
+- `RC.OK` si existen cambios;
+- `RC.NothingToDo` si no existen;
+- `RC.Fatal` si Git falla.
+
+Esto permite que `commit` trate “working tree limpio” como una condición normal y no como error.
+
+## Protocolo IASI
+
+`RunProtocolLogged()` está diseñado para procesos cuyo exit code ya sigue el protocolo IASI, como las llamadas a `iasi.quarto` ejecutadas mediante `Rscript`.
+
+Si el proceso termina con un código entre `0x00` y `0xFF`, ese valor se conserva. Un fallo no interpretable se convierte en `RC.Error`.
